@@ -12,30 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
   m_Name: AtlasWorkflowState
   m_EditorClassIdentifier: 
-  ActiveApiId: 9fc9f3ab-fbfd-49d2-b7f7-d0eb33416809
-  ActiveName: pedepe_unity_test
-  BaseUrl: https://api.prod.atlas.design
+  ActiveApiId: 802e1766-a773-4629-a585-bb4f815c0339
+  ActiveName: Image
+  BaseUrl: https://api.dev.atlas.design
   Version: 0.1
   Inputs:
-  - ParamId: input_text_1
-    Label: input_text_1
+  - ParamId: input_text
+    Label: input_text
     ParamType: 2
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
-    StringValue: 'Style: southern german
-
-'
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
-  - ParamId: input_text_2
-    Label: input_text_2
-    ParamType: 2
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 0
-    StringValue: 'Building Type: residential'
+    StringValue: make shorter
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
     FilePath: 
@@ -48,17 +36,7 @@ MonoBehaviour:
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:/Users/matan/Downloads/Input_input_image.png
-  - ParamId: input_number_of_seed
-    Label: input_number_of_seed
-    ParamType: 1
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 10
-    StringValue: 
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
+    FilePath: C:/Users/matan/Downloads/output_image.png
   Outputs:
   - ParamId: output_image
     Label: output_image
@@ -69,7 +47,7 @@ MonoBehaviour:
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_image_cddc8f0c-6cd6-427c-bff3-521c21e60276.png
+    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_image_cb5d6c11-d411-4fec-8107-6f13677ed67b.png
   IsJobRunning: 0
   JobStatus: 
   JobProgress: 0
