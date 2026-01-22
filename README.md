@@ -41,9 +41,7 @@
   - [Output Types](#output-types)
 - [Configuration](#-configuration)
 - [File Structure](#-file-structure)
-- [Architecture](#-architecture)
 - [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
 - [License](#-license)
 
 ---
