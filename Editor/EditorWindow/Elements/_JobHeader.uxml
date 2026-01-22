@@ -1,14 +1,16 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:VisualElement style="flex-grow: 1; flex-direction: row; align-items: center; flex-shrink: 0; justify-content: space-between; width: 100%; flex-wrap: nowrap; flex-basis: initial;">
-        <ui:VisualElement name="RightMenu" style="flex-grow: 0; flex-direction: row; align-items: center; flex-shrink: 1; flex-basis: auto;">
-            <ui:Label text="Label" name="Title" style="flex-direction: row;" />
-            <ui:Label text="Label" name="StartTime" style="flex-shrink: 1; flex-direction: row;" />
+    <ui:VisualElement class="running-job-row">
+        <ui:VisualElement class="running-job-left">
+            <ui:VisualElement class="running-job-spinner" name="Spinner" />
+            <ui:VisualElement class="running-job-info">
+                <ui:Label text="Workflow" name="Title" class="running-job-title" />
+                <ui:Label text="00:00:00" name="StartTime" class="running-job-start" />
+            </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="Filler" style="flex-grow: 1;" />
-        <ui:VisualElement name="LeftMenu" style="flex-grow: 0; flex-direction: row; align-items: center; margin-right: 15px;">
-            <ui:Label text="Label" name="Status" />
-            <ui:ProgressBar value="22" name="Progress" style="min-width: 80px;" />
-            <ui:Label text="Label" name="TotalTime" />
+        <ui:VisualElement class="running-job-right">
+            <ui:Label text="Running" name="Status" class="running-job-status" />
+            <ui:ProgressBar value="0" name="Progress" class="running-job-progress" />
+            <ui:Label text="(00:00)" name="TotalTime" class="running-job-elapsed" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

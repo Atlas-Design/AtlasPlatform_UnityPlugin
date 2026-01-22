@@ -57,88 +57,89 @@ public class RunningJobsView
 
     private VisualElement CreateRunningRow(AtlasWorkflowJobState job)
     {
-        VisualElement header;
+        VisualElement row;
 
         if (jobHeaderTemplate != null)
-            header = jobHeaderTemplate.Instantiate();
+            row = jobHeaderTemplate.Instantiate();
         else
-            header = new VisualElement();
+            row = new VisualElement();
 
-        header.style.flexGrow = 1f;
-        header.style.width = Length.Percent(100);
+        var titleField = row.Q<Label>("Title");
+        var startTimeField = row.Q<Label>("StartTime");
+        var statusField = row.Q<Label>("Status");
+        var totalTimeField = row.Q<Label>("TotalTime");
+        var progressBar = row.Q<ProgressBar>("Progress");
+        var spinner = row.Q<VisualElement>("Spinner");
 
-        var titleField = header.Q<Label>("Title");
-        var startTimeField = header.Q<Label>("StartTime");
-        var statusField = header.Q<Label>("Status");
-        var totalTimeField = header.Q<Label>("TotalTime");
-        var progressBar = header.Q<ProgressBar>("Progress");
-
-        // Left side
+        // Left side - job info
         if (titleField != null)
-            titleField.text = (job.WorkflowName ?? "Unnamed") + " | ";
+            titleField.text = job.WorkflowName ?? "Unnamed";
 
         if (startTimeField != null)
         {
             var localStart = job.CreatedAtUtc.ToLocalTime();
-            startTimeField.text = localStart.ToString("HH:mm:ss");
+            startTimeField.text = "Started " + localStart.ToString("HH:mm:ss");
         }
 
-        // Right side
+        // Right side - status
         if (statusField != null)
         {
             statusField.text = job.Status.ToString();
-            SetStatusColor(statusField, job.Status);
         }
 
         if (totalTimeField != null)
         {
             var elapsed = System.DateTime.UtcNow - job.CreatedAtUtc;
-            totalTimeField.text = "(" + FormatTimeSpan(elapsed) + ")";
+            totalTimeField.text = FormatTimeSpan(elapsed);
         }
 
-        // Spinner-style progress bar with proper cleanup
-        if (progressBar != null)
+        // Animated progress bar and spinner pulse
+        if (job.Status == JobStatus.Running)
         {
-            if (job.Status == JobStatus.Running)
+            float v = 0f;
+            float pulse = 0f;
+            var startTime = job.CreatedAtUtc;
+
+            IVisualElementScheduledItem scheduledItem = null;
+            scheduledItem = row.schedule.Execute(() =>
             {
-                progressBar.style.display = DisplayStyle.Flex;
-
-                float v = 0f;
-                var startTime = job.CreatedAtUtc;
-
-                // Store the scheduled item so we can stop it later
-                IVisualElementScheduledItem scheduledItem = null;
-                scheduledItem = progressBar.schedule.Execute(() =>
-                {
-                    // Safety check: stop if element is no longer attached to panel
-                    if (header.panel == null)
-                    {
-                        scheduledItem?.Pause();
-                        return;
-                    }
-
-                    v = (v + 3f) % 100f;
-                    progressBar.value = v;
-
-                    var elapsed = System.DateTime.UtcNow - startTime;
-                    if (totalTimeField != null)
-                        totalTimeField.text = "(" + FormatTimeSpan(elapsed) + ")";
-
-                }).Every(50);
-
-                // Stop the scheduled task when the element is removed from the visual tree
-                header.RegisterCallback<DetachFromPanelEvent>(evt =>
+                if (row.panel == null)
                 {
                     scheduledItem?.Pause();
-                });
-            }
-            else
+                    return;
+                }
+
+                // Animate progress bar
+                v = (v + 2f) % 100f;
+                if (progressBar != null)
+                    progressBar.value = v;
+
+                // Pulse the spinner opacity
+                pulse = (pulse + 0.05f) % (2f * Mathf.PI);
+                if (spinner != null)
+                {
+                    float alpha = 0.6f + 0.4f * Mathf.Sin(pulse);
+                    spinner.style.opacity = alpha;
+                }
+
+                // Update elapsed time
+                var elapsed = System.DateTime.UtcNow - startTime;
+                if (totalTimeField != null)
+                    totalTimeField.text = FormatTimeSpan(elapsed);
+
+            }).Every(50);
+
+            row.RegisterCallback<DetachFromPanelEvent>(evt =>
             {
-                progressBar.style.display = DisplayStyle.None;
-            }
+                scheduledItem?.Pause();
+            });
+        }
+        else if (progressBar != null)
+        {
+            progressBar.style.display = DisplayStyle.None;
         }
 
-        return header;
+        return row;
     }
 
     private string FormatTimeSpan(System.TimeSpan span)
@@ -152,22 +153,4 @@ public class RunningJobsView
         return string.Format("{0:00}:{1:00}", span.Minutes, span.Seconds);
     }
 
-    private void SetStatusColor(Label label, JobStatus status)
-    {
-        switch (status)
-        {
-            case JobStatus.Running:
-                label.style.color = new StyleColor(Color.yellow);
-                break;
-            case JobStatus.Succeeded:
-                label.style.color = new StyleColor(Color.green);
-                break;
-            case JobStatus.Failed:
-                label.style.color = new StyleColor(Color.red);
-                break;
-            default:
-                label.style.color = new StyleColor(Color.gray);
-                break;
-        }
-    }
 }

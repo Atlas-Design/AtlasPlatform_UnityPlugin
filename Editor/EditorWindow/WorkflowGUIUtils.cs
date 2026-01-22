@@ -7,28 +7,27 @@ public static class WorkflowGUIUtils
 {
     public static Color GetParamColor(ParamType type)
     {
-        //Debug.Log("Finding color for ");
-        //Debug.Log(type);
         switch (type)
         {
-            case ParamType.boolean: return new Color32(0xAE, 0x81, 0xFF, 0xFF);
-            case ParamType.number: return new Color32(0x52, 0x94, 0xE2, 0xFF);
-            case ParamType.@string: return new Color32(0x79, 0xCC, 0x63, 0xFF);
-            case ParamType.image: return new Color32(0xE6, 0xDB, 0x74, 0xFF);
-            case ParamType.mesh: return new Color32(0xF9, 0x26, 0x72, 0xFF);
+            case ParamType.boolean: return new Color32(0xE7, 0x4C, 0x3C, 0xFF); // Red
+            case ParamType.number: return new Color32(0xE6, 0xA0, 0x3C, 0xFF);  // Orange
+            case ParamType.@string: return new Color32(0x52, 0x94, 0xE2, 0xFF); // Blue
+            case ParamType.image: return new Color32(0xE6, 0xDB, 0x74, 0xFF);   // Yellow
+            case ParamType.mesh: return new Color32(0xAE, 0x81, 0xFF, 0xFF);    // Purple
             default: return Color.grey;
         }
     }
 
-    // Apply style to an existing element (Fixes the invisible UXML circles) ---
+    // Apply style to an existing element
     public static void StyleTypeIndicator(VisualElement root, ParamType type)
     {
-        // We find the 'type-indicator' element in the UXML
         var indicator = root.Q<VisualElement>("type-indicator");
         if (indicator == null) return;
 
-        // Apply Color
         Color color = GetParamColor(type);
+        // Set background color for filled dot style
+        indicator.style.backgroundColor = new StyleColor(color);
+        // Also set borders for legacy support
         indicator.style.borderRightColor = color;
         indicator.style.borderTopColor = color;
         indicator.style.borderLeftColor = color;

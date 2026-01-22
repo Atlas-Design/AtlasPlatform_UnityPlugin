@@ -10,10 +10,12 @@
             <ui:VisualElement class="panel-header">
                 <ui:Label text="Workflow Library" class="panel-header__title primary-panel__title" />
             </ui:VisualElement>
-            <ui:VisualElement class="panel-body">
-                <ui:Label text="Load a workflow JSON and manage saved presets." class="hint-text" />
-                <ui:Button name="load-file-button" text="Load from File..." />
-                <uie:DropdownField name="library-dropdown" label="Library" />
+            <ui:VisualElement class="panel-body library-body">
+                <ui:VisualElement class="library-row">
+                    <ui:VisualElement name="library-active-dot" class="library-active-dot" />
+                    <ui:DropdownField name="library-dropdown" class="library-dropdown" />
+                    <ui:Button name="load-file-button" text="Import" class="library-import-btn" tooltip="Import workflow from JSON file" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="current-workflow-panel" class="section-box primary-panel">

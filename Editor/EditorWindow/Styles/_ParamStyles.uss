@@ -1,57 +1,136 @@
 /* In _ParamStyles.uss */
 
+/* Simple param row (boolean, number, string) */
 .param-row {
     display: flex;
     flex-direction: row;
     align-items: center; 
-    min-height: 24px;      /* ensures there's room vertically */
+    min-height: 24px;
     margin: 2px 0;
-    padding: 4px 0;        /* gives breathing room above/below children */
+    padding: 4px 8px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
 }
 
 .type-indicator {
-    margin-right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    flex-shrink: 0;
 }
 
-/* Color definitions (unchanged) */
+/* Color definitions */
 .type-color-default { background-color: grey; }
-.type-color-boolean { background-color: #AE81FF; } /* Purple */
-.type-color-number { background-color: #5294E2; } /* Blue */
-.type-color-string { background-color: #79CC63; } /* Green */
+.type-color-boolean { background-color: #E74C3C; } /* Red */
+.type-color-number { background-color: #E6A03C; } /* Orange */
+.type-color-string { background-color: #5294E2; } /* Blue */
 .type-color-image { background-color: #E6DB74; } /* Yellow */
-.type-color-mesh { background-color: #F92672; } /* Pink */
+.type-color-mesh { background-color: #AE81FF; } /* Purple */
 
-.clickable-output-image {    cursor: link; }
+.clickable-output-image { cursor: link; }
 
 .param-label {
-    /* Give the label a fixed width to ensure alignment */
-    width: 120px;
-    /* Do not allow the label to shrink either */
-    flex-shrink: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
     margin-right: 5px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .param-value {
-    /* Allow the input field to grow and take up remaining space */
     flex-grow: 1;
-    /* And also allow it to shrink if the window is too small */
     flex-shrink: 1;
-        white-space: normal;
-
+    white-space: normal;
 }
 
 .hidden { display: none; }
 
-/* Complex type styles (unchanged) */
-.param-row-complex { flex-direction: column; align-items: stretch; margin: 2px 0; padding: 4px; }
-.param-row-header { flex-direction: row; align-items: center; }
-.param-input-box { border-width: 1px; border-color: rgb(50, 50, 50); border-radius: 3px; padding: 5px; margin-left: 15px; }
-.file-path-row { flex-direction: row; }
-.file-path-row > TextField { flex-grow: 1; }
+/* Complex type styles (image, mesh) */
+.param-row-complex { 
+    flex-direction: column; 
+    align-items: stretch; 
+    margin: 2px 0; 
+    padding: 6px 8px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
 
+.param-row-header { 
+    flex-direction: row; 
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.param-input-box { 
+    border-width: 1px; 
+    border-color: rgb(40, 40, 40); 
+    border-radius: 3px; 
+    padding: 4px 6px; 
+    margin-left: 14px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Source dropdown (new compact style) */
+.source-dropdown {
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.source-dropdown .unity-base-field__label {
+    display: none;
+}
+
+.source-dropdown .unity-base-popup-field__input {
+    padding: 1px 4px;
+    min-height: 18px;
+    font-size: 10px;
+    border-radius: 3px;
+    background-color: rgb(60, 60, 60);
+}
+
+/* File input row */
+.file-input-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.file-path-label {
+    flex-grow: 1;
+    font-size: 10px;
+    color: rgb(180, 180, 180);
+    background-color: rgb(40, 40, 40);
+    border-radius: 3px;
+    padding: 4px 6px;
+    margin-right: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.browse-button {
+    flex-shrink: 0;
+    min-width: 60px;
+    padding: 2px 8px;
+    font-size: 10px;
+}
+
+/* Output file label */
+.output-file-label {
+    font-size: 9px;
+    color: rgb(140, 140, 140);
+}
+
+/* Legacy toggle buttons (kept for backwards compatibility) */
 .source-toggle-row {
     flex-direction: row;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
 .source-toggle-button {
@@ -60,19 +139,34 @@
     border-radius: 0;
     background-color: #2c2c2c;
     color: #cccccc;
+    font-size: 10px;
+    padding: 2px 4px;
 }
 
 .source-toggle-button-active {
     background-color: #3a4f73;
-    background-image: none; /* <--- CRITICAL: Removes Unity's default button gradient */
+    background-image: none;
     border-color: #7aa2ff;
     color: white;
 }
 
-/* Optional: Ensure hover doesn't break the active look */
-
 .source-toggle-button-active:hover {
     background-color: #4b6691;
     color: white;
+}
+
+/* ========================================
+   Output Preview Row (pending outputs)
+   ======================================== */
+
+.output-preview-row {
+    justify-content: flex-start;
+}
+
+.output-preview-status {
+    margin-left: auto;
+    font-size: 10px;
+    color: rgb(120, 120, 120);
+    -unity-font-style: italic;
 }
 

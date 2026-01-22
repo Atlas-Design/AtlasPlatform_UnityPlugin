@@ -1,5 +1,8 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
+using GLTFast;
+using GLTFast.Logging;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -44,7 +47,7 @@ public class WorkflowParamRenderer
             default: return new Label($"Unknown Input Type: {param.ParamType}");
         }
     }
-    public VisualElement RenderOutput(AtlasWorkflowParamState param,bool isEditable)
+    public VisualElement RenderOutput(AtlasWorkflowParamState param, bool isEditable)
     {
         // Outputs are ALWAYS interactive (for importing/viewing), even in history.
         switch (param.ParamType)
@@ -56,6 +59,39 @@ public class WorkflowParamRenderer
             case ParamType.mesh: return CreateMeshOutput(param, isEditable);
             default: return new Label($"Unknown Output Type: {param.ParamType}");
         }
+    }
+
+    /// <summary>
+    /// Renders a simple preview row for an output parameter (used in Current Workflow before job runs).
+    /// Shows type indicator, param name, and "(pending)" status - no interactive elements.
+    /// </summary>
+    public VisualElement RenderOutputPreview(AtlasWorkflowParamState param)
+    {
+        var row = new VisualElement();
+        row.AddToClassList("param-row");
+        row.AddToClassList("output-preview-row");
+
+        // Type indicator dot
+        var indicator = new VisualElement();
+        indicator.name = "type-indicator";
+        indicator.AddToClassList("type-indicator");
+        row.Add(indicator);
+        
+        // Apply color based on type
+        Color color = WorkflowGUIUtils.GetParamColor(param.ParamType);
+        indicator.style.backgroundColor = new StyleColor(color);
+
+        // Param label
+        var label = new Label(param.Label);
+        label.AddToClassList("param-label");
+        row.Add(label);
+
+        // Pending status
+        var statusLabel = new Label("(pending)");
+        statusLabel.AddToClassList("output-preview-status");
+        row.Add(statusLabel);
+
+        return row;
     }
 
 
@@ -162,12 +198,25 @@ public class WorkflowParamRenderer
             }
         }
 
+        // New label-based file path display
+        var filePathLabel = root.Q<Label>("file-path-label");
+        // Fallback to old TextField if label not found
         var filePathField = root.Q<TextField>("file-path-field");
-        if (filePathField != null)
+        
+        void UpdateFilePathDisplay(string path)
         {
-            filePathField.value = inputState.FilePath;
-            filePathField.SetEnabled(isEditable);
+            if (filePathLabel != null)
+            {
+                filePathLabel.text = TruncateFilePath(path);
+                filePathLabel.tooltip = path ?? "";
+            }
+            else if (filePathField != null)
+            {
+                filePathField.value = path ?? "";
+            }
         }
+        
+        UpdateFilePathDisplay(inputState.FilePath);
 
         var browseButton = root.Q<Button>("browse-button");
         if (browseButton != null)
@@ -176,11 +225,11 @@ public class WorkflowParamRenderer
             if (isEditable)
             {
                 browseButton.clicked += () => {
-                    string path = EditorUtility.OpenFilePanel("Select Image", "", "png");
+                    string path = EditorUtility.OpenFilePanel("Select Image", "", "png,jpg,jpeg");
                     if (!string.IsNullOrEmpty(path))
                     {
                         inputState.FilePath = path;
-                        if (filePathField != null) filePathField.value = path;
+                        UpdateFilePathDisplay(path);
                         SaveState();
                     }
                 };
@@ -215,12 +264,25 @@ public class WorkflowParamRenderer
             }
         }
 
+        // New label-based file path display
+        var filePathLabel = root.Q<Label>("file-path-label");
+        // Fallback to old TextField if label not found
         var filePathField = root.Q<TextField>("file-path-field");
-        if (filePathField != null)
+        
+        void UpdateFilePathDisplay(string path)
         {
-            filePathField.value = inputState.FilePath;
-            filePathField.SetEnabled(isEditable);
+            if (filePathLabel != null)
+            {
+                filePathLabel.text = TruncateFilePath(path);
+                filePathLabel.tooltip = path ?? "";
+            }
+            else if (filePathField != null)
+            {
+                filePathField.value = path ?? "";
+            }
         }
+        
+        UpdateFilePathDisplay(inputState.FilePath);
 
         var browseButton = root.Q<Button>("browse-button");
         if (browseButton != null)
@@ -229,11 +291,11 @@ public class WorkflowParamRenderer
             if (isEditable)
             {
                 browseButton.clicked += () => {
-                    string path = EditorUtility.OpenFilePanel("Select Mesh", "", "glb");
+                    string path = EditorUtility.OpenFilePanel("Select Mesh", "", "glb,gltf,fbx,obj");
                     if (!string.IsNullOrEmpty(path))
                     {
                         inputState.FilePath = path;
-                        if (filePathField != null) filePathField.value = path;
+                        UpdateFilePathDisplay(path);
                         SaveState();
                     }
                 };
@@ -435,18 +497,8 @@ public class WorkflowParamRenderer
 
                 importButton.clicked += () =>
                 {
-                    string folder = SettingsManager.GetSavePath();
-                    if (string.IsNullOrEmpty(folder))
-                        folder = "Assets";
-
-                    string destFileName = $"{outputState.ParamId}.glb";
-                    string destPath = AssetDatabase.GenerateUniqueAssetPath(
-                        Path.Combine(folder, destFileName));
-
-                    File.Copy(tempPath, destPath, true);
-                    AssetDatabase.ImportAsset(destPath);
-                    AssetDatabase.Refresh();
-                    RefreshAssetField(destPath);
+                    // Use GLTFast Runtime API to bypass ScriptedImporter limitations
+                    ImportMeshWithGltfastRuntime(tempPath, outputState.ParamId, assetField);
                 };
             }
             else
@@ -479,6 +531,141 @@ public class WorkflowParamRenderer
     {
         EditorUtility.SetDirty(state);
     }
+
+    /// <summary>
+    /// Editor-compatible defer agent that processes everything immediately (synchronously).
+    /// This avoids the DontDestroyOnLoad issue in GLTFast's default defer agent.
+    /// </summary>
+    private class EditorDeferAgent : IDeferAgent
+    {
+        public bool ShouldDefer() => false;
+        public bool ShouldDefer(float duration) => false;
+        public Task BreakPoint() => Task.CompletedTask;
+        public Task BreakPoint(float duration) => Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Custom logger to capture GLTFast errors and warnings.
+    /// </summary>
+    private class GltfLogger : ICodeLogger
+    {
+        public void Error(LogCode code, params string[] messages)
+        {
+            Debug.LogError($"[GLTFast Error] {code}: {string.Join(" ", messages)}");
+        }
+
+        public void Warning(LogCode code, params string[] messages)
+        {
+            Debug.LogWarning($"[GLTFast Warning] {code}: {string.Join(" ", messages)}");
+        }
+
+        public void Info(LogCode code, params string[] messages)
+        {
+            Debug.Log($"[GLTFast Info] {code}: {string.Join(" ", messages)}");
+        }
+
+        public void Error(string message) => Debug.LogError($"[GLTFast Error] {message}");
+        public void Warning(string message) => Debug.LogWarning($"[GLTFast Warning] {message}");
+        public void Info(string message) => Debug.Log($"[GLTFast Info] {message}");
+    }
+
+    /// <summary>
+    /// Imports a GLB mesh using GLTFast's Runtime API (more flexible than ScriptedImporter)
+    /// and saves it as a prefab in the Assets folder.
+    /// </summary>
+    private async void ImportMeshWithGltfastRuntime(string sourcePath, string paramId, ObjectField assetField)
+    {
+        string folder = SettingsManager.GetSavePath();
+        if (string.IsNullOrEmpty(folder))
+            folder = "Assets";
+
+        // Ensure the folder exists
+        if (!AssetDatabase.IsValidFolder(folder))
+        {
+            string parentFolder = Path.GetDirectoryName(folder);
+            string newFolderName = Path.GetFileName(folder);
+            if (string.IsNullOrEmpty(parentFolder)) parentFolder = "Assets";
+            AssetDatabase.CreateFolder(parentFolder, newFolderName);
+        }
+
+        string prefabName = $"{paramId}.prefab";
+        string prefabPath = AssetDatabase.GenerateUniqueAssetPath(Path.Combine(folder, prefabName));
+
+        Debug.Log($"[Atlas] Loading mesh with GLTFast Runtime API from: {sourcePath}");
+
+        try
+        {
+            // Read the GLB file as bytes - more reliable than file:// URI on Windows
+            byte[] glbData = File.ReadAllBytes(sourcePath);
+            Debug.Log($"[Atlas] Read {glbData.Length} bytes from GLB file");
+
+            // Create GLTFast importer with Editor-compatible defer agent and logger
+            var deferAgent = new EditorDeferAgent();
+            var logger = new GltfLogger();
+            var gltfImport = new GltfImport(null, deferAgent, null, logger);
+            
+            // Load the GLB file from bytes
+            bool success = await gltfImport.LoadGltfBinary(glbData, new Uri(sourcePath));
+            
+            if (!success)
+            {
+                Debug.LogError($"[Atlas] GLTFast failed to load mesh. Check above for detailed errors.");
+                return;
+            }
+
+            // Create a temporary parent GameObject to hold the instantiated mesh
+            var tempParent = new GameObject($"TempMesh_{paramId}");
+            
+            try
+            {
+                // Instantiate the loaded mesh
+                bool instantiateSuccess = await gltfImport.InstantiateMainSceneAsync(tempParent.transform);
+                
+                if (!instantiateSuccess)
+                {
+                    Debug.LogError("[Atlas] GLTFast failed to instantiate the mesh.");
+                    UnityEngine.Object.DestroyImmediate(tempParent);
+                    return;
+                }
+
+                // The mesh is now instantiated as children of tempParent
+                // We need to save it as a prefab
+                
+                // Rename the root to something meaningful
+                tempParent.name = paramId;
+
+                // Save as prefab
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(tempParent, prefabPath);
+                
+                if (prefab != null)
+                {
+                    Debug.Log($"[Atlas] Successfully imported mesh as prefab: {prefabPath}");
+                    
+                    // Update the asset field
+                    if (assetField != null)
+                    {
+                        assetField.value = prefab;
+                    }
+                    
+                    // Ping the asset in the Project window
+                    EditorGUIUtility.PingObject(prefab);
+                }
+                else
+                {
+                    Debug.LogError($"[Atlas] Failed to save prefab to: {prefabPath}");
+                }
+            }
+            finally
+            {
+                // Clean up the temporary scene object
+                UnityEngine.Object.DestroyImmediate(tempParent);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Atlas] Error importing mesh: {ex.Message}\n{ex.StackTrace}");
+        }
+    }
       
     private void SetupLabel(VisualElement row, string text)
     {
@@ -488,22 +675,23 @@ public class WorkflowParamRenderer
 
     private void SetupSourceToggle(VisualElement root, AtlasWorkflowParamState pState, bool isEditable)
     {
-        var projectButton = root.Q<Button>("source-project-button");
-        var fileButton = root.Q<Button>("source-file-button");
+        var sourceDropdown = root.Q<DropdownField>("source-dropdown");
         var projectField = root.Q("project-asset-field");
         var fileRow = root.Q("external-file-row");
+
+        // Fallback to old button-based system if dropdown not found
+        var projectButton = root.Q<Button>("source-project-button");
+        var fileButton = root.Q<Button>("source-file-button");
 
         void EnsureValidSourceType()
         {
             bool hasProjectAsset = (pState.ImageValue != null || pState.MeshValue != null);
             bool hasFilePath = !string.IsNullOrEmpty(pState.FilePath);
 
-            // Fix: If defaulted to Project (0) but data suggests FilePath, switch it.
             if (pState.SourceType == InputSourceType.Project && !hasProjectAsset && hasFilePath)
             {
                 pState.SourceType = InputSourceType.FilePath;
             }
-            // Fix: If set to FilePath but data suggests Project, switch it.
             else if (pState.SourceType == InputSourceType.FilePath && !hasFilePath && hasProjectAsset)
             {
                 pState.SourceType = InputSourceType.Project;
@@ -516,19 +704,42 @@ public class WorkflowParamRenderer
 
             bool isProject = pState.SourceType == InputSourceType.Project;
 
-            // Toggle Fields
             if (projectField != null)
                 projectField.style.display = isProject ? DisplayStyle.Flex : DisplayStyle.None;
             if (fileRow != null)
                 fileRow.style.display = isProject ? DisplayStyle.None : DisplayStyle.Flex;
 
-            // Toggle Visual Highlight
-            // Note: This relies on the USS having 'background-image: none' to show clearly
+            // Update dropdown value if using new system
+            if (sourceDropdown != null)
+            {
+                sourceDropdown.SetValueWithoutNotify(isProject ? "Project" : "External");
+            }
+
+            // Update buttons if using old system
             projectButton?.EnableInClassList("source-toggle-button-active", isProject);
             fileButton?.EnableInClassList("source-toggle-button-active", !isProject);
         }
 
-        if (isEditable)
+        // New dropdown-based system
+        if (sourceDropdown != null)
+        {
+            sourceDropdown.choices = new System.Collections.Generic.List<string> { "Project", "External" };
+            sourceDropdown.SetEnabled(isEditable);
+
+            if (isEditable)
+            {
+                sourceDropdown.RegisterValueChangedCallback(evt =>
+                {
+                    pState.SourceType = evt.newValue == "Project" 
+                        ? InputSourceType.Project 
+                        : InputSourceType.FilePath;
+                    UpdateVisibility();
+                    SaveState();
+                });
+            }
+        }
+        // Old button-based system (fallback)
+        else if (isEditable)
         {
             if (projectButton != null)
                 projectButton.clicked += () =>
@@ -552,8 +763,23 @@ public class WorkflowParamRenderer
             fileButton?.SetEnabled(false);
         }
 
-        // Apply initial state
         UpdateVisibility();
+    }
+    
+    /// <summary>
+    /// Truncates a file path to show only the filename, with full path in tooltip.
+    /// </summary>
+    private string TruncateFilePath(string path, int maxLength = 40)
+    {
+        if (string.IsNullOrEmpty(path)) return "No file selected";
+        
+        string fileName = Path.GetFileName(path);
+        
+        if (fileName.Length <= maxLength)
+            return fileName;
+            
+        // Truncate with ellipsis
+        return "..." + fileName.Substring(fileName.Length - maxLength + 3);
     }
 
     private VisualTreeAsset LoadTemplate(string uxmlName)

@@ -2,7 +2,9 @@
   "name": "Atlas.Workflow.Editor",
   "rootNamespace": "Atlas.Workflow.Editor",
   "references": [
-    "Atlas.Workflow.Logic"
+    "Atlas.Workflow.Logic",
+    "glTFast",
+    "glTFast.Editor"
   ],
   "includePlatforms": [
     "Editor"

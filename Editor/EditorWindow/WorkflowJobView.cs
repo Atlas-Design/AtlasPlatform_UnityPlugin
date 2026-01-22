@@ -9,12 +9,12 @@ public class WorkflowJobView : VisualElement
 {
     // --- Internal UI References ---
     private Label workflowNameLabel;
+    private Label workflowSubtitle;
+    private VisualElement statusDot;
     private Label statusLabel;
     private ProgressBar progressBar;
     private VisualElement inputsContainer;
     private VisualElement outputsContainer;
-    private Label detailsApiId, detailsBaseUrl, detailsVersion;
-    private Foldout detailsFoldout;
 
     public WorkflowJobView()
     {
@@ -29,15 +29,12 @@ public class WorkflowJobView : VisualElement
 
         // Query for the internal elements that we need to control
         workflowNameLabel = this.Q<Label>("workflow-name-label");
+        workflowSubtitle = this.Q<Label>("workflow-subtitle");
+        statusDot = this.Q<VisualElement>("workflow-status-dot");
         statusLabel = this.Q<Label>("status-label");
         progressBar = this.Q<ProgressBar>("progress-bar");
         inputsContainer = this.Q<VisualElement>("inputs-container");
         outputsContainer = this.Q<VisualElement>("outputs-container");
-        detailsApiId = this.Q<Label>("details-api-id");
-        detailsBaseUrl = this.Q<Label>("details-base-url");
-        detailsVersion = this.Q<Label>("details-version");
-        detailsFoldout = this.Q<Foldout>("details-foldout");
-
     }
 
     // Public method to update this component's UI from the state object.
@@ -47,15 +44,61 @@ public class WorkflowJobView : VisualElement
 
         bool isLoaded = !string.IsNullOrEmpty(state.ActiveName);
 
-        // Populate the details
+        // Populate the header
         workflowNameLabel.text = isLoaded ? state.ActiveName : "No Workflow Loaded";
-        detailsApiId.text = $"API ID: {state.ActiveApiId}";
-        detailsBaseUrl.text = $"Base URL: {state.BaseUrl}";
-        detailsVersion.text = $"Version: {state.Version}";
+        
+        // Build subtitle with version and domain
+        if (workflowSubtitle != null)
+        {
+            if (isLoaded)
+            {
+                string domain = ExtractDomain(state.BaseUrl);
+                string version = string.IsNullOrEmpty(state.Version) ? "" : $"v{state.Version}";
+                
+                if (!string.IsNullOrEmpty(version) && !string.IsNullOrEmpty(domain))
+                    workflowSubtitle.text = $"{version} ? {domain}";
+                else if (!string.IsNullOrEmpty(domain))
+                    workflowSubtitle.text = domain;
+                else if (!string.IsNullOrEmpty(version))
+                    workflowSubtitle.text = version;
+                else
+                    workflowSubtitle.text = "";
+                    
+                workflowSubtitle.tooltip = $"API ID: {state.ActiveApiId}\nBase URL: {state.BaseUrl}";
+            }
+            else
+            {
+                workflowSubtitle.text = "";
+                workflowSubtitle.tooltip = "";
+            }
+        }
+        
+        // Set status dot to green (ready) for live workflow
+        if (statusDot != null)
+        {
+            statusDot.style.backgroundColor = new StyleColor(new Color(0.4f, 0.8f, 0.4f)); // Green
+        }
 
         // Use the UIBuilder to populate the dynamic lists
         uiBuilder.PopulateInputs(inputsContainer);
         uiBuilder.PopulateOutputs(outputsContainer);
+    }
+    
+    /// <summary>
+    /// Extracts just the domain from a URL for display.
+    /// </summary>
+    private string ExtractDomain(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return "";
+        try
+        {
+            var uri = new System.Uri(url);
+            return uri.Host;
+        }
+        catch
+        {
+            return url;
+        }
     }
 
     public void PopulateFromJob(AtlasWorkflowJobState job, WorkflowParamRenderer renderer)
@@ -63,33 +106,40 @@ public class WorkflowJobView : VisualElement
         if (job == null || renderer == null)
             return;
 
-        // --- Header: workflow name + start time ---
+        // --- Header: workflow name ---
         if (workflowNameLabel != null)
         {
+            workflowNameLabel.text = job.WorkflowName ?? "Unnamed";
+        }
+        
+        // --- Subtitle: timestamp and duration ---
+        if (workflowSubtitle != null)
+        {
             var localStart = job.CreatedAtUtc.ToLocalTime();
-            workflowNameLabel.text = $"{job.WorkflowName ?? "Unnamed"} | {localStart:HH:mm:ss}";
+            string duration = FormatJobDurationForHeader(job);
+            
+            if (!string.IsNullOrEmpty(duration))
+                workflowSubtitle.text = $"{localStart:MMM d, HH:mm} â€¢ {duration}";
+            else
+                workflowSubtitle.text = $"{localStart:MMM d, HH:mm}";
+        }
+        
+        // --- Status dot color ---
+        if (statusDot != null)
+        {
+            statusDot.style.backgroundColor = new StyleColor(GetStatusColor(job.Status));
         }
 
-        // --- Status text + color (you can tweak this to match your taste) ---
+        // --- Status text + color ---
         if (statusLabel != null)
         {
-            string duration = FormatJobDurationForHeader(job);
-            string statusText = job.Status.ToString();
-            string rightText = string.IsNullOrEmpty(duration)
-                ? statusText
-                : $"{statusText} ({duration})";
-
-            statusLabel.text = rightText;
+            statusLabel.text = job.Status.ToString();
             statusLabel.style.color = GetStatusColor(job.Status);
         }
 
         // We don't use a progress bar in history; hide it if you have one.
         if (progressBar != null)
             progressBar.style.display = DisplayStyle.None;
-
-        // Hide the details foldout in Job History
-        if (detailsFoldout != null)
-            detailsFoldout.style.display = DisplayStyle.None;
 
         // --- Inputs from snapshot (read-only) ---
         if (inputsContainer != null)
@@ -114,7 +164,7 @@ public class WorkflowJobView : VisualElement
             {
                 foreach (var output in job.OutputsSnapshot)
                 {
-                    // true here if you want “Import/View” buttons to be enabled
+                    // true here if you want ?Import/View? buttons to be enabled
                     outputsContainer.Add(renderer.RenderOutput(output, true));
                 }
             }
@@ -122,7 +172,7 @@ public class WorkflowJobView : VisualElement
     }
     /// <summary>
     /// Same idea as your current FormatJobDuration in JobHistoryView.
-    /// Copy that logic here, or simplify if you don’t care about duration.
+    /// Copy that logic here, or simplify if you don?t care about duration.
     /// </summary>
     private string FormatJobDurationForHeader(AtlasWorkflowJobState job)
     {

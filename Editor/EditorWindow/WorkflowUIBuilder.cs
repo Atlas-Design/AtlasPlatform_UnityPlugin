@@ -1,4 +1,4 @@
-﻿using UnityEngine.UIElements;
+using UnityEngine.UIElements;
 
 public class WorkflowUIBuilder
 {
@@ -26,13 +26,26 @@ public class WorkflowUIBuilder
         }
     }
 
-    public void PopulateOutputs(VisualElement container)
+    /// <summary>
+    /// Populates outputs with full interactive UI (for job history with results).
+    /// </summary>
+    public void PopulateOutputs(VisualElement container, bool showFullOutput = false)
     {
         container.Clear();
         foreach (var outputState in state.Outputs)
         {
-            // Outputs are always rendered fully so you can use "Import"/"View" buttons
-            var element = renderer.RenderOutput(outputState,false);
+            VisualElement element;
+            if (showFullOutput)
+            {
+                // Full output rendering with Import/View buttons (for job history)
+                element = renderer.RenderOutput(outputState, true);
+            }
+            else
+            {
+                // Simple preview for Current Workflow (before job runs)
+                element = renderer.RenderOutputPreview(outputState);
+            }
+            
             if (element != null)
                 container.Add(element);
         }

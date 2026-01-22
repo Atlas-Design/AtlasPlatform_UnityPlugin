@@ -22,6 +22,7 @@ public class AtlasWorkflowEditor : EditorWindow
     // --- UI Element References ---
     private Button loadFileButton;
     private DropdownField libraryDropdown;
+    private VisualElement libraryActiveDot;
     private VisualElement jobViewContainer;
     private Button runWorkflowButton;
     private ScrollView jobsList;
@@ -93,6 +94,7 @@ public class AtlasWorkflowEditor : EditorWindow
     {
         loadFileButton = root.Q<Button>("load-file-button");
         libraryDropdown = root.Q<DropdownField>("library-dropdown");
+        libraryActiveDot = root.Q<VisualElement>("library-active-dot");
         jobViewContainer = root.Q<VisualElement>("job-view-container");
         runWorkflowButton = root.Q<Button>("run-workflow-button");
 
@@ -146,6 +148,12 @@ public class AtlasWorkflowEditor : EditorWindow
 
     private void OnLibrarySelectionChanged(ChangeEvent<string> evt)
     {
+        // Ignore placeholder text or empty values
+        if (string.IsNullOrEmpty(evt.newValue) || 
+            evt.newValue == "Select a workflow..." || 
+            evt.newValue == "No workflows - click Import")
+            return;
+            
         string filePath = Path.Combine(WorkflowManager.GetLibraryDirectory(), evt.newValue);
         stateController.LoadWorkflowFromFile(filePath);
         UpdateUIBasedOnState();
@@ -415,7 +423,30 @@ public class AtlasWorkflowEditor : EditorWindow
         bool isWorkflowLoaded = !string.IsNullOrEmpty(state.ActiveName);
         jobView.style.display = isWorkflowLoaded ? DisplayStyle.Flex : DisplayStyle.None;
         if (runWorkflowButton != null)
+        {
             runWorkflowButton.EnableInClassList("hidden", !isWorkflowLoaded);
+            if (isWorkflowLoaded)
+            {
+                runWorkflowButton.text = $"▶  Run {state.ActiveName}";
+            }
+        }
+
+        // Update library active dot
+        if (libraryActiveDot != null)
+            libraryActiveDot.EnableInClassList("inactive", !isWorkflowLoaded);
+
+        // Update dropdown placeholder when no workflow loaded
+        if (!isWorkflowLoaded)
+        {
+            var workflows = WorkflowManager.GetSavedWorkflows();
+            var textElement = libraryDropdown?.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElement != null)
+            {
+                textElement.text = workflows.Count == 0 
+                    ? "No workflows - click Import" 
+                    : "Select a workflow...";
+            }
+        }
 
         if (isWorkflowLoaded)
         {
@@ -439,7 +470,28 @@ public class AtlasWorkflowEditor : EditorWindow
 
     private void PopulateLibraryDropdown()
     {
-        libraryDropdown.choices = WorkflowManager.GetSavedWorkflows().Select(Path.GetFileName).ToList();
+        var workflows = WorkflowManager.GetSavedWorkflows().Select(Path.GetFileName).ToList();
+        libraryDropdown.choices = workflows;
+        
+        // Set placeholder text when no workflow is selected
+        if (string.IsNullOrEmpty(libraryDropdown.value) || !workflows.Contains(libraryDropdown.value))
+        {
+            if (workflows.Count == 0)
+            {
+                libraryDropdown.SetValueWithoutNotify("");
+                // Use a visual hint through the text input
+                var textElement = libraryDropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+                if (textElement != null)
+                    textElement.text = "No workflows - click Import";
+            }
+            else
+            {
+                libraryDropdown.SetValueWithoutNotify("");
+                var textElement = libraryDropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+                if (textElement != null)
+                    textElement.text = "Select a workflow...";
+            }
+        }
     }
 
     #endregion
