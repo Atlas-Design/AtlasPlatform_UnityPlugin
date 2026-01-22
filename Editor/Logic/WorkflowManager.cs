@@ -138,6 +138,9 @@ public static class WorkflowManager
         job.CompletedAtUtc = DateTime.UtcNow;
         job.Progress01 = 1f;
         SaveJobToDisk(job);
+        
+        // Show notification if enabled
+        NotifyJobComplete(job, true);
     }
 
     /// <summary>
@@ -150,6 +153,32 @@ public static class WorkflowManager
         job.ErrorMessage = errorMessage;
         job.Progress01 = 1f;
         SaveJobToDisk(job);
+        
+        // Show notification if enabled
+        NotifyJobComplete(job, false);
+    }
+
+    /// <summary>
+    /// Shows a notification dialog when a job completes (if enabled in settings).
+    /// </summary>
+    private static void NotifyJobComplete(AtlasWorkflowJobState job, bool succeeded)
+    {
+        // Check temp storage limit (this creates a warning in console if exceeded)
+        SettingsManager.CheckTempStorageLimit();
+        
+        if (!SettingsManager.GetNotifyOnJobComplete())
+            return;
+
+        string title = succeeded ? "Workflow Completed" : "Workflow Failed";
+        string message = succeeded
+            ? $"'{job.WorkflowName}' completed successfully."
+            : $"'{job.WorkflowName}' failed.\n\n{job.ErrorMessage}";
+
+        // Use EditorApplication.delayCall to ensure we're on the main thread
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            UnityEditor.EditorUtility.DisplayDialog(title, message, "OK");
+        };
     }
 
 

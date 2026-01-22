@@ -6,9 +6,15 @@ using System.IO;
 
 public static class SettingsManager
 {
+    // EditorPrefs keys
     private const string SavePathKey = "AtlasWorkflow_SavePath";
     private const string VerboseLoggingKey = "AtlasWorkflow_VerboseLogging";
     private const string ApiTimeoutKey = "AtlasWorkflow_ApiTimeout";
+    private const string NotifyOnJobCompleteKey = "AtlasWorkflow_NotifyOnJobComplete";
+    private const string MaxTempStorageMBKey = "AtlasWorkflow_MaxTempStorageMB";
+    private const string WarnOnTempExceededKey = "AtlasWorkflow_WarnOnTempExceeded";
+    
+    // Default values
     private const string DefaultSavePath = "Assets/AtlasOutputs";
     
     /// <summary>
@@ -25,6 +31,11 @@ public static class SettingsManager
     /// Special value indicating no timeout limit.
     /// </summary>
     public const int NoTimeoutValue = -1;
+    
+    /// <summary>
+    /// Default max temp storage in MB.
+    /// </summary>
+    public const int DefaultMaxTempStorageMB = 500;
 
     #region Save Path
 
@@ -138,6 +149,81 @@ public static class SettingsManager
         if (minutes == 60)
             return "1 hour";
         return $"{minutes} minutes";
+    }
+
+    #endregion
+
+    #region Notifications
+
+    /// <summary>
+    /// Gets whether to notify when a job completes.
+    /// </summary>
+    public static bool GetNotifyOnJobComplete()
+    {
+        return EditorPrefs.GetBool(NotifyOnJobCompleteKey, true);
+    }
+
+    /// <summary>
+    /// Sets whether to notify when a job completes.
+    /// </summary>
+    public static void SetNotifyOnJobComplete(bool enabled)
+    {
+        EditorPrefs.SetBool(NotifyOnJobCompleteKey, enabled);
+    }
+
+    #endregion
+
+    #region Storage Settings
+
+    /// <summary>
+    /// Gets the maximum temp storage size in MB.
+    /// </summary>
+    public static int GetMaxTempStorageMB()
+    {
+        return EditorPrefs.GetInt(MaxTempStorageMBKey, DefaultMaxTempStorageMB);
+    }
+
+    /// <summary>
+    /// Sets the maximum temp storage size in MB.
+    /// </summary>
+    public static void SetMaxTempStorageMB(int megabytes)
+    {
+        megabytes = Mathf.Clamp(megabytes, 100, 5000); // 100MB to 5GB
+        EditorPrefs.SetInt(MaxTempStorageMBKey, megabytes);
+    }
+
+    /// <summary>
+    /// Gets whether to warn when temp storage exceeds the limit.
+    /// </summary>
+    public static bool GetWarnOnTempExceeded()
+    {
+        return EditorPrefs.GetBool(WarnOnTempExceededKey, true);
+    }
+
+    /// <summary>
+    /// Sets whether to warn when temp storage exceeds the limit.
+    /// </summary>
+    public static void SetWarnOnTempExceeded(bool enabled)
+    {
+        EditorPrefs.SetBool(WarnOnTempExceededKey, enabled);
+    }
+
+    /// <summary>
+    /// Checks if temp storage exceeds the configured limit and logs a warning if enabled.
+    /// </summary>
+    public static void CheckTempStorageLimit()
+    {
+        if (!GetWarnOnTempExceeded()) return;
+
+        var (fileCount, totalBytes) = AssetExporter.GetTempDirectoryInfo();
+        long maxBytes = GetMaxTempStorageMB() * 1024L * 1024L;
+
+        if (totalBytes > maxBytes)
+        {
+            AtlasLogger.LogWarning(
+                $"Temporary files ({AssetExporter.FormatBytes(totalBytes)}) exceed the configured limit " +
+                $"({GetMaxTempStorageMB()} MB). Consider cleaning up in Project Settings > Atlas Workflow.");
+        }
     }
 
     #endregion

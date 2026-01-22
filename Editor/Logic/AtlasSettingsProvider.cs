@@ -171,28 +171,90 @@ public class AtlasSettingsProvider : SettingsProvider
             });
         }
 
-        // 8. Initialize and wire temp file management
+        // 8. Initialize and wire notification settings
+        var notifyJobCompleteToggle = rootElement.Q<Toggle>("notify-job-complete-toggle");
+        if (notifyJobCompleteToggle != null)
+        {
+            notifyJobCompleteToggle.SetValueWithoutNotify(SettingsManager.GetNotifyOnJobComplete());
+            notifyJobCompleteToggle.RegisterValueChangedCallback(evt =>
+            {
+                SettingsManager.SetNotifyOnJobComplete(evt.newValue);
+            });
+        }
+
+        // 9. Initialize and wire storage settings
         var tempFilesInfoLabel = rootElement.Q<Label>("temp-files-info-label");
+        var maxStorageSlider = rootElement.Q<SliderInt>("max-storage-slider");
+        var maxStorageLabel = rootElement.Q<Label>("max-storage-label");
+        var warnExceededToggle = rootElement.Q<Toggle>("warn-exceeded-toggle");
+        var storageExceededWarning = rootElement.Q<Label>("storage-exceeded-warning");
         var cleanupTempButton = rootElement.Q<Button>("cleanup-temp-button");
         var clearAllTempButton = rootElement.Q<Button>("clear-all-temp-button");
 
-        // Helper to refresh the temp files info display
+        // Helper to refresh the temp files info display and check limits
         void RefreshTempFilesInfo()
         {
-            if (tempFilesInfoLabel == null) return;
-
             var (fileCount, totalBytes) = AssetExporter.GetTempDirectoryInfo();
-            if (fileCount == 0)
+            
+            if (tempFilesInfoLabel != null)
             {
-                tempFilesInfoLabel.text = "No temp files";
+                if (fileCount == 0)
+                {
+                    tempFilesInfoLabel.text = "No temp files";
+                }
+                else
+                {
+                    tempFilesInfoLabel.text = $"{fileCount} file(s), {AssetExporter.FormatBytes(totalBytes)}";
+                }
             }
-            else
+
+            // Check if storage limit is exceeded
+            if (storageExceededWarning != null)
             {
-                tempFilesInfoLabel.text = $"{fileCount} file(s), {AssetExporter.FormatBytes(totalBytes)}";
+                long maxBytes = SettingsManager.GetMaxTempStorageMB() * 1024L * 1024L;
+                bool exceeded = totalBytes > maxBytes;
+                
+                storageExceededWarning.style.display = exceeded ? DisplayStyle.Flex : DisplayStyle.None;
+                if (exceeded)
+                {
+                    storageExceededWarning.text = $"⚠ Storage limit exceeded! Current: {AssetExporter.FormatBytes(totalBytes)}, Limit: {SettingsManager.GetMaxTempStorageMB()} MB";
+                }
             }
         }
 
+        // Helper to update max storage display
+        void UpdateMaxStorageDisplay()
+        {
+            if (maxStorageLabel != null)
+            {
+                maxStorageLabel.text = $"{SettingsManager.GetMaxTempStorageMB()} MB";
+            }
+            RefreshTempFilesInfo(); // Re-check if limit is exceeded
+        }
+
+        // Initialize max storage slider
+        if (maxStorageSlider != null)
+        {
+            maxStorageSlider.SetValueWithoutNotify(SettingsManager.GetMaxTempStorageMB());
+            maxStorageSlider.RegisterValueChangedCallback(evt =>
+            {
+                SettingsManager.SetMaxTempStorageMB(evt.newValue);
+                UpdateMaxStorageDisplay();
+            });
+        }
+
+        // Initialize warn exceeded toggle
+        if (warnExceededToggle != null)
+        {
+            warnExceededToggle.SetValueWithoutNotify(SettingsManager.GetWarnOnTempExceeded());
+            warnExceededToggle.RegisterValueChangedCallback(evt =>
+            {
+                SettingsManager.SetWarnOnTempExceeded(evt.newValue);
+            });
+        }
+
         // Initial display
+        UpdateMaxStorageDisplay();
         RefreshTempFilesInfo();
 
         // Wire cleanup button (removes files older than 7 days)

@@ -1,56 +1,83 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:Style src="../Styles/_ParamStyles.uss" />
-
-    <ui:VisualElement style="padding: 10px;">
-        <ui:Label text="Global Settings for the Atlas Workflow Plugin"
-                  style="font-size: 14px; -unity-font-style: bold; margin-bottom: 10px;" />
-
-        <!-- Asset Save Path Section -->
-        <ui:Label text="Asset Save Path" style="margin-top: 10px;" />
-        <ui:Label text="The folder inside your project where generated images and meshes will be saved."
-                  style="font-size: 9px; color: grey;" />
-
-        <ui:VisualElement class="file-path-row">
-            <ui:TextField name="save-path-field" isReadOnly="true" />
-            <ui:Button name="browse-save-path-button" text="Browse..." />
-        </ui:VisualElement>
-
-        <!-- Logging Section -->
-        <ui:Label text="Logging" style="margin-top: 20px; font-size: 12px; -unity-font-style: bold;" />
+    <ui:VisualElement style="padding: 8px;">
         
-        <ui:VisualElement style="flex-direction: row; align-items: center; margin-top: 6px;">
-            <ui:Toggle name="verbose-logging-toggle" />
-            <ui:Label text="Enable Verbose Logging" style="margin-left: 4px;" />
-        </ui:VisualElement>
-        <ui:Label text="When enabled, detailed logs for API calls, job operations, and file handling will be written to the Console."
-                  style="font-size: 9px; color: grey; margin-left: 18px;" />
-
-        <!-- API Settings Section -->
-        <ui:Label text="API Settings" style="margin-top: 20px; font-size: 12px; -unity-font-style: bold;" />
-        <ui:Label text="Configure timeouts for API requests. Increase for long-running workflows."
-                  style="font-size: 9px; color: grey;" />
+        <!-- OUTPUT SETTINGS -->
+        <ui:Label text="Output Settings" style="-unity-font-style: bold; margin-top: 4px; margin-bottom: 4px;" />
         
-        <ui:VisualElement style="flex-direction: row; align-items: center; margin-top: 6px;">
-            <ui:Label text="Request Timeout:" style="min-width: 100px;" />
-            <ui:SliderInt name="timeout-slider" low-value="1" high-value="60" value="10" style="flex-grow: 1; min-width: 150px;" />
-            <ui:Label name="timeout-value-label" text="10 minutes" style="min-width: 80px; margin-left: 8px;" />
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0;">
+            <ui:Label text="Asset Save Path" style="min-width: 180px;" />
+            <ui:TextField name="save-path-field" readonly="true" style="flex-grow: 1;" />
+            <ui:Button name="browse-save-path-button" text="Browse" style="width: 60px; margin-left: 4px;" />
         </ui:VisualElement>
-        <ui:VisualElement style="flex-direction: row; align-items: center; margin-top: 4px;">
+
+        <!-- SEPARATOR -->
+        <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
+
+        <!-- API SETTINGS -->
+        <ui:Label text="API Settings" style="-unity-font-style: bold; margin-bottom: 4px;" />
+        
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Request Timeout" style="min-width: 180px;" />
+            <ui:SliderInt name="timeout-slider" low-value="1" high-value="60" value="10" style="flex-grow: 1;" />
+            <ui:Label name="timeout-value-label" text="10 minutes" style="min-width: 70px; margin-left: 8px;" />
+        </ui:VisualElement>
+
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="No Timeout Limit" style="min-width: 180px;" />
             <ui:Toggle name="no-timeout-toggle" />
-            <ui:Label text="No Timeout Limit (for very long workflows)" style="margin-left: 4px;" />
         </ui:VisualElement>
-        <ui:Label text="Warning: Disabling timeout means requests will wait indefinitely. Use with caution."
-                  style="font-size: 9px; color: #FFAA00; margin-left: 18px;" />
+        <ui:Label text="Warning: Requests will wait indefinitely when enabled." style="font-size: 10px; color: rgb(200, 150, 50); margin-left: 180px;" />
 
-        <!-- Temp Files Section -->
-        <ui:Label text="Temporary Files" style="margin-top: 20px; font-size: 12px; -unity-font-style: bold;" />
-        <ui:Label text="Temporary files are created during asset export and API operations. Old files are automatically cleaned up after 7 days."
-                  style="font-size: 9px; color: grey;" />
+        <!-- SEPARATOR -->
+        <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
+
+        <!-- NOTIFICATIONS -->
+        <ui:Label text="Notifications" style="-unity-font-style: bold; margin-bottom: 4px;" />
         
-        <ui:VisualElement style="flex-direction: row; align-items: center; margin-top: 6px;">
-            <ui:Label name="temp-files-info-label" text="Calculating..." style="min-width: 150px;" />
-            <ui:Button name="cleanup-temp-button" text="Clean Old Files" style="margin-left: 8px;" />
-            <ui:Button name="clear-all-temp-button" text="Clear All" style="margin-left: 4px;" />
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Notify on Job Complete" style="min-width: 180px;" />
+            <ui:Toggle name="notify-job-complete-toggle" value="true" />
         </ui:VisualElement>
+
+        <!-- SEPARATOR -->
+        <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
+
+        <!-- STORAGE -->
+        <ui:Label text="Temporary Storage" style="-unity-font-style: bold; margin-bottom: 4px;" />
+        
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Current Usage" style="min-width: 180px;" />
+            <ui:Label name="temp-files-info-label" text="Calculating..." />
+        </ui:VisualElement>
+
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Max Storage Size" style="min-width: 180px;" />
+            <ui:SliderInt name="max-storage-slider" low-value="100" high-value="2000" value="500" style="flex-grow: 1;" />
+            <ui:Label name="max-storage-label" text="500 MB" style="min-width: 70px; margin-left: 8px;" />
+        </ui:VisualElement>
+
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Warn When Exceeded" style="min-width: 180px;" />
+            <ui:Toggle name="warn-exceeded-toggle" value="true" />
+        </ui:VisualElement>
+
+        <ui:Label name="storage-exceeded-warning" text="" style="color: rgb(255, 100, 100); margin: 4px 0; display: none;" />
+
+        <ui:VisualElement style="flex-direction: row; margin: 8px 0;">
+            <ui:Button name="cleanup-temp-button" text="Clean Old Files" style="margin-right: 8px;" />
+            <ui:Button name="clear-all-temp-button" text="Clear All" />
+        </ui:VisualElement>
+
+        <!-- SEPARATOR -->
+        <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
+
+        <!-- LOGGING -->
+        <ui:Label text="Logging" style="-unity-font-style: bold; margin-bottom: 4px;" />
+        
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Verbose Logging" style="min-width: 180px;" />
+            <ui:Toggle name="verbose-logging-toggle" />
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>
