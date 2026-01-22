@@ -1,6 +1,9 @@
-# Atlas Platform — Unity Workflow Plugin
 ![Atlas Unity Plugin Banner](Docs~/Images/Banner.png)
+
+# Atlas Platform — Unity Workflow Plugin
 Unity Editor plugin for running **Atlas Platform workflows** directly from Unity: load a workflow JSON, provide inputs (values / images / meshes), execute on the Atlas backend, and download outputs back to your machine.
+
+
 
 > Status: **Early / in active development** (API + UI are evolving)
 
@@ -70,28 +73,6 @@ Outputs that are files (images/meshes) are downloaded to a temporary folder and 
 - Job history:
   - Stored **next to your Unity project**, outside `Assets/`, under an `AtlasWorkflowJobs` folder.
 
----
-
-## Repository structure
-
-com.atlas.workflow/
-├─ Editor/
-├─ Tests/
-├─ Docs~/
-│ └─ Images/
-│ └─ banner.png
-├─ package.json
-├─ README.md
-└─ LICENSE
-
----
-
-## Add an image / banner to this README
-
-1. Create a folder in the repo:
-
-
----
 
 ## License
 
