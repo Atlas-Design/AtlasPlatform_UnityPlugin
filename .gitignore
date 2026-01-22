@@ -1,3 +1,5 @@
+# Unity Package (.upm) repository (not a full Unity project)
+
 # OS
 .DS_Store
 Thumbs.db
@@ -8,7 +10,7 @@ Thumbs.db
 *.csproj
 *.sln
 
-# Unity generated (package-safe)
+# Unity generated
 Library/
 Temp/
 Obj/
@@ -17,7 +19,7 @@ Builds/
 Logs/
 UserSettings/
 
-# Unity packaging artifacts
+# Packaging artifacts
 *.unitypackage
 
 # Misc
