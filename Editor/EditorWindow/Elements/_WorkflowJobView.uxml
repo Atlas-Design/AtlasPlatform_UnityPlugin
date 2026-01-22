@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_WorkflowJobView.uss?fileID=7433441132597879392&amp;guid=651450396d11c3f4bb26a4a9c5541b56&amp;type=3#_WorkflowJobView" />
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss?fileID=7433441132597879392&amp;guid=137bd3f6517b35648a6975ef73eb63d3&amp;type=3#_ParamStyles" />
+    <ui:VisualElement name="job-view-root" class="job-view-container" style="margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;">
+        <ui:VisualElement name="status-section" class="status-section">
+            <ui:Label name="workflow-name-label" text="Workflow Name" class="workflow-name" />
+            <ui:Label name="status-label" text="Ready" class="status-label" />
+        </ui:VisualElement>
+        <ui:ScrollView>
+            <ui:Foldout name="inputs-foldout" text="Inputs" class="io-foldout">
+                <ui:VisualElement name="inputs-container" class="io-foldout-content" />
+            </ui:Foldout>
+            <ui:Foldout name="outputs-foldout" text="Outputs" class="io-foldout">
+                <ui:VisualElement name="outputs-container" class="io-foldout-content" />
+            </ui:Foldout>
+            <ui:Foldout name="details-foldout" text="Details" class="io-foldout">
+                <ui:VisualElement name="details-container" class="io-foldout-content">
+                    <ui:Label name="details-api-id" text="API ID: " />
+                    <ui:Label name="details-base-url" text="Base URL: " />
+                    <ui:Label name="details-version" text="Version: " />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

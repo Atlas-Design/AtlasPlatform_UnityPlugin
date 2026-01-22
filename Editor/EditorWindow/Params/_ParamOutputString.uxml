@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss?fileID=7433441132597879392&amp;guid=137bd3f6517b35648a6975ef73eb63d3&amp;type=3#_ParamStyles" />
+    <ui:VisualElement class="param-row" style="flex-direction: row; align-items: center;">
+        <ui:VisualElement name="type-indicator" class="type-indicator" style="border-top-width: 5px; border-right-width: 5px; border-bottom-width: 5px; border-left-width: 5px; border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; border-left-color: rgb(255, 0, 0); border-right-color: rgb(255, 0, 0); border-top-color: rgb(255, 0, 0); border-bottom-color: rgb(255, 0, 0); padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; flex-basis: auto; flex-direction: column; flex-wrap: nowrap; flex-grow: 0; flex-shrink: 0; height: 10px; width: 10px;" />
+        <ui:Label name="label" text="Parameter Label" class="param-label" />
+        <ui:ScrollView name="value-scroll" vertical-scroller-visibility="Auto" horizontal-scroller-visibility="Hidden" style="flex-grow: 1; max-height: 200px; flex-shrink: 0;">
+            <ui:TextField name="value-field" class="param-value" style="flex-grow: 1; white-space: normal;" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

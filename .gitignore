@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.csproj
+*.sln
+
+# Unity generated (package-safe)
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+
+# Unity packaging artifacts
+*.unitypackage
+
+# Misc
+*.pidb

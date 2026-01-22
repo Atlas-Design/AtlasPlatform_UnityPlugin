@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
+  m_Name: AtlasWorkflowState
+  m_EditorClassIdentifier: 
+  ActiveApiId: 9fc9f3ab-fbfd-49d2-b7f7-d0eb33416809
+  ActiveName: pedepe_unity_test
+  BaseUrl: https://api.prod.atlas.design
+  Version: 0.1
+  Inputs:
+  - ParamId: input_text_1
+    Label: input_text_1
+    ParamType: 2
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 'Style: southern german
+
+'
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
+  - ParamId: input_text_2
+    Label: input_text_2
+    ParamType: 2
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 'Building Type: residential'
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
+  - ParamId: input_image
+    Label: input_image
+    ParamType: 3
+    SourceType: 1
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: C:/Users/matan/Downloads/Input_input_image.png
+  - ParamId: input_number_of_seed
+    Label: input_number_of_seed
+    ParamType: 1
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 10
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
+  Outputs:
+  - ParamId: output_image
+    Label: output_image
+    ParamType: 3
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_image_cddc8f0c-6cd6-427c-bff3-521c21e60276.png
+  IsJobRunning: 0
+  JobStatus: 
+  JobProgress: 0

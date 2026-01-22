@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+<ui:Style src="../Styles/AtlasWorkflowEditor.uss" />
+<ui:Style src="../Styles/_WorkflowJobView.uss" />
+
+<ui:VisualElement name="RootSplit" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
+        <ui:VisualElement name="LeftPane" class="jobs-split-pane jobs-split-pane--left" style="flex-grow: 1; max-width: 250px; width: 250px; min-width: 250px;" />
+        <ui:VisualElement name="RightPane" class="jobs-split-pane jobs-split-pane--right" style="flex-grow: 1;" />
+    </ui:VisualElement>
+</ui:UXML>
