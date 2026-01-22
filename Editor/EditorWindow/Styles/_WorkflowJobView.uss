@@ -141,3 +141,179 @@
     padding-bottom: 2px;
     padding-left: 4px;
 }
+
+/* ========================================
+   Filter Toolbar Styles
+   ======================================== */
+
+.filter-toolbar {
+    flex-direction: column;
+    padding: 4px 4px;
+    background-color: rgb(45, 45, 45);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(30, 30, 30);
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.filter-grid {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.filter-labels-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.filter-dropdowns-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.filter-label {
+    font-size: 9px;
+    color: rgb(140, 140, 140);
+    white-space: nowrap;
+    flex: 1;
+    padding-left: 2px;
+    margin-bottom: 2px;
+}
+
+.filter-chip {
+    flex: 1;
+    font-size: 9px;
+    margin-right: 4px;
+}
+
+.filter-chip .unity-base-field__label {
+    display: none;
+}
+
+.filter-chip .unity-base-popup-field__input {
+    padding: 1px 4px;
+    min-height: 18px;
+    font-size: 9px;
+    border-radius: 2px;
+    background-color: rgb(55, 55, 55);
+    border-color: rgb(70, 70, 70);
+}
+
+.filter-chip .unity-base-popup-field__input:hover {
+    background-color: rgb(65, 65, 65);
+}
+
+/* ========================================
+   Panel Menu Button Styles
+   ======================================== */
+
+.panel-menu-btn {
+    font-size: 16px;
+    min-width: 22px;
+    max-width: 22px;
+    min-height: 20px;
+    max-height: 20px;
+    padding: 0;
+    margin: 0;
+    margin-right: 4px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgb(200, 200, 200);
+    -unity-text-align: middle-center;
+}
+
+.panel-menu-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgb(255, 255, 255);
+}
+
+/* ========================================
+   Date Group Styles
+   ======================================== */
+
+.date-group {
+    margin-bottom: 2px;
+}
+
+.date-group-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 6px;
+    background-color: rgb(50, 50, 50);
+    border-radius: 3px;
+    margin: 2px;
+    cursor: link;
+}
+
+.date-group-header:hover {
+    background-color: rgb(58, 58, 58);
+}
+
+.date-group-header--collapsed {
+    opacity: 0.7;
+}
+
+.date-group-toggle {
+    font-size: 10px;
+    margin-right: 4px;
+    color: rgb(150, 150, 150);
+    min-width: 12px;
+}
+
+.date-group-title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(180, 180, 180);
+}
+
+.date-group-count {
+    font-size: 10px;
+    color: rgb(120, 120, 120);
+    margin-left: 6px;
+}
+
+.date-group-content {
+    margin-left: 4px;
+    padding-left: 4px;
+    border-left-width: 1px;
+    border-left-color: rgb(60, 60, 60);
+}
+
+.date-group-content--hidden {
+    display: none;
+}
+
+/* ========================================
+   Enhanced Job Row with Timestamp
+   ======================================== */
+
+.job-row-content {
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.job-row-main {
+    flex-direction: row;
+    align-items: center;
+}
+
+.job-row-name {
+    font-size: 11px;
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+
+.job-row-time {
+    font-size: 9px;
+    color: rgb(130, 130, 130);
+    margin-left: auto;
+    margin-right: 6px;
+    white-space: nowrap;
+}

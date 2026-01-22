@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="filter-toolbar" class="filter-toolbar">
+        <ui:VisualElement class="filter-grid">
+            <!-- Row 1: Labels -->
+            <ui:VisualElement class="filter-labels-row">
+                <ui:Label text="Status" class="filter-label" />
+                <ui:Label text="Type" class="filter-label" />
+                <ui:Label text="Date" class="filter-label" />
+            </ui:VisualElement>
+            <!-- Row 2: Dropdowns -->
+            <ui:VisualElement class="filter-dropdowns-row">
+                <ui:DropdownField name="status-filter" class="filter-chip" />
+                <ui:DropdownField name="type-filter" class="filter-chip" />
+                <ui:DropdownField name="date-filter" class="filter-chip" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

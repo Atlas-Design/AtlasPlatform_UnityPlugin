@@ -26,6 +26,7 @@ public class AtlasWorkflowEditor : EditorWindow
     private Button runWorkflowButton;
     private ScrollView jobsList;
     private WorkflowJobView jobView;
+    private Button jobsMenuBtn;
 
     private VisualElement runningJobsPanel;
     private ScrollView runningJobsList;
@@ -99,6 +100,7 @@ public class AtlasWorkflowEditor : EditorWindow
         runningJobsList = root.Q<ScrollView>("running-jobs-list");
 
         jobsList = root.Q<ScrollView>("jobs-list");
+        jobsMenuBtn = root.Q<Button>("jobs-menu-btn");
     }
 
     private void RegisterCallbacks()
@@ -106,6 +108,22 @@ public class AtlasWorkflowEditor : EditorWindow
         loadFileButton.clicked += OnLoadFromFileClicked;
         libraryDropdown.RegisterValueChangedCallback(OnLibrarySelectionChanged);
         runWorkflowButton.clicked += OnRunWorkflowClicked;
+
+        // Jobs History menu button
+        if (jobsMenuBtn != null)
+        {
+            jobsMenuBtn.clicked += OnJobsMenuClicked;
+        }
+    }
+
+    private void OnJobsMenuClicked()
+    {
+        var menu = new GenericMenu();
+        menu.AddItem(new GUIContent("Clear History"), false, () =>
+        {
+            historyView?.ClearHistory();
+        });
+        menu.ShowAsContext();
     }
 
     #endregion

@@ -34,6 +34,8 @@
         <ui:VisualElement name="jobs-panel" class="section-box primary-panel" style="padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;">
             <ui:VisualElement class="panel-header">
                 <ui:Label text="Jobs History" class="panel-header__title primary-panel__title" />
+                <ui:VisualElement style="flex-grow: 1;" />
+                <ui:Button name="jobs-menu-btn" text="⋮" class="panel-menu-btn" tooltip="Options" />
             </ui:VisualElement>
             <ui:VisualElement class="panel-body">
                 <ui:ScrollView name="jobs-list" />
