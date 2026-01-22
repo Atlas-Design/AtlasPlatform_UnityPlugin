@@ -17,9 +17,9 @@
         <ui:Label text="API Settings" style="-unity-font-style: bold; margin-bottom: 4px;" />
         
         <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
-            <ui:Label text="Request Timeout" style="min-width: 180px;" />
-            <ui:SliderInt name="timeout-slider" low-value="1" high-value="60" value="10" style="flex-grow: 1;" />
-            <ui:Label name="timeout-value-label" text="10 minutes" style="min-width: 70px; margin-left: 8px;" />
+            <ui:Label text="Request Timeout" style="min-width: 180px; flex-shrink: 0;" />
+            <ui:SliderInt name="timeout-slider" low-value="1" high-value="60" value="10" style="flex-grow: 1; flex-shrink: 1; min-width: 100px;" />
+            <ui:Label name="timeout-value-label" text="10 minutes" style="min-width: 80px; margin-left: 8px; flex-shrink: 0;" />
         </ui:VisualElement>
 
         <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
@@ -51,9 +51,9 @@
         </ui:VisualElement>
 
         <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
-            <ui:Label text="Max Storage Size" style="min-width: 180px;" />
-            <ui:SliderInt name="max-storage-slider" low-value="100" high-value="2000" value="500" style="flex-grow: 1;" />
-            <ui:Label name="max-storage-label" text="500 MB" style="min-width: 70px; margin-left: 8px;" />
+            <ui:Label text="Max Storage Size" style="min-width: 180px; flex-shrink: 0;" />
+            <ui:SliderInt name="max-storage-slider" low-value="100" high-value="2000" value="500" style="flex-grow: 1; flex-shrink: 1; min-width: 100px;" />
+            <ui:Label name="max-storage-label" text="500 MB" style="min-width: 80px; margin-left: 8px; flex-shrink: 0;" />
         </ui:VisualElement>
 
         <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
