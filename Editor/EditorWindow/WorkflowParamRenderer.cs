@@ -312,6 +312,9 @@ public class WorkflowParamRenderer
         bool hasFile = !string.IsNullOrEmpty(path) && File.Exists(path);
         string fileName = hasFile ? Path.GetFileName(path) : null;
 
+        // Track texture for cleanup
+        Texture2D previewTexture = null;
+
         // --- File label (both live + history) ---------------------------------
         if (fileLabel != null)
         {
@@ -342,13 +345,27 @@ public class WorkflowParamRenderer
                 try
                 {
                     var bytes = File.ReadAllBytes(path);
-                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                    if (tex.LoadImage(bytes))
-                        preview.image = tex;
+                    previewTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (previewTexture.LoadImage(bytes))
+                    {
+                        preview.image = previewTexture;
+                    }
+                    else
+                    {
+                        // Failed to load - clean up immediately
+                        UnityEngine.Object.DestroyImmediate(previewTexture);
+                        previewTexture = null;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[CreateImageOutput] Failed to load image preview: {ex.Message}");
+                    AtlasLogger.LogWarning($"Failed to load image preview: {ex.Message}");
+                    // Clean up on error
+                    if (previewTexture != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(previewTexture);
+                        previewTexture = null;
+                    }
                 }
 
                 // In live panel we let you click to reveal; history can be read-only
@@ -363,6 +380,16 @@ public class WorkflowParamRenderer
                 }
             }
         }
+
+        // --- Memory cleanup: Destroy texture when element is removed from hierarchy ---
+        root.RegisterCallback<DetachFromPanelEvent>(evt =>
+        {
+            if (previewTexture != null)
+            {
+                UnityEngine.Object.DestroyImmediate(previewTexture);
+                previewTexture = null;
+            }
+        });
 
         return root;
     }

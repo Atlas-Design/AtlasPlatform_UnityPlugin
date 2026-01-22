@@ -23,7 +23,7 @@ public static class WorkflowManager
     #region Library Management (Workflow Files)
 
     /// <summary>
-    /// returns the full path to the workflow library directory (PersistentDataPath). 
+    /// Returns the full path to the workflow library directory (PersistentDataPath). 
     /// Creates the directory if it does not exist.
     /// </summary>
     public static string GetLibraryDirectory()
@@ -32,7 +32,7 @@ public static class WorkflowManager
         if (!Directory.Exists(path))
         {
             Directory.CreateDirectory(path);
-            //Debug.Log($"[WorkflowManager] Created library directory at: {path}");
+            AtlasLogger.LogFile($"Created library directory at: {path}");
         }
         return path;
     }
@@ -54,7 +54,7 @@ public static class WorkflowManager
     {
         if (!File.Exists(sourceFilePath))
         {
-            //Debug.LogError($"[WorkflowManager] Source file not found: {sourceFilePath}");
+            AtlasLogger.LogError($"Source file not found: {sourceFilePath}");
             return null;
         }
 
@@ -66,8 +66,11 @@ public static class WorkflowManager
 
         if (File.Exists(destinationPath))
         {
+            AtlasLogger.LogFile($"Saved workflow to library: {destinationPath}");
             return destinationPath;
         }
+        
+        AtlasLogger.LogError($"Failed to save workflow to: {destinationPath}");
         return null;
     }
 
@@ -82,11 +85,12 @@ public static class WorkflowManager
 
         if (!File.Exists(filePath))
         {
-            //Debug.LogWarning($"[WorkflowManager] Cannot delete, file not found: {filePath}");
+            AtlasLogger.LogWarning($"Cannot delete workflow, file not found: {filePath}");
             return false;
         }
 
         File.Delete(filePath);
+        AtlasLogger.LogFile($"Deleted workflow from library: {filePath}");
         return !File.Exists(filePath);
     }
 
@@ -120,7 +124,7 @@ public static class WorkflowManager
         Jobs.Add(job);
         SaveJobToDisk(job);
 
-        //Debug.Log($"[WorkflowManager] Created job {job.JobId} for workflow '{job.WorkflowName}'");
+        AtlasLogger.LogJob($"Created job {job.JobId} for workflow '{job.WorkflowName}'");
 
         return job;
     }
@@ -200,7 +204,7 @@ public static class WorkflowManager
                     NumberValue = src.NumberValue,
                     StringValue = src.StringValue,
 
-                    // We keep the Unity asset refs; they’re needed for export
+                    // We keep the Unity asset refs; theyï¿½re needed for export
                     ImageValue = src.ImageValue,
                     MeshValue = src.MeshValue,
 
@@ -307,10 +311,12 @@ public static class WorkflowManager
 
             var json = JsonConvert.SerializeObject(job, Formatting.Indented, settings);
             File.WriteAllText(jobFilePath, json);
+            
+            AtlasLogger.LogJob($"Saved job {job.JobId} to: {jobFilePath}");
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[WorkflowManager] Failed to save job {job.JobId}: {ex}");
+            AtlasLogger.LogException(ex, $"Failed to save job {job.JobId}");
         }
     }
 
@@ -345,15 +351,15 @@ public static class WorkflowManager
                 }
                 catch (System.Exception ex)
                 {
-                    Debug.LogError($"[WorkflowManager] Failed to load job from {jobFilePath}: {ex}");
+                    AtlasLogger.LogException(ex, $"Failed to load job from {jobFilePath}");
                 }
             }
 
-            Debug.Log($"[WorkflowManager] Loaded {Jobs.Count} job(s) from disk.");
+            AtlasLogger.LogJob($"Loaded {Jobs.Count} job(s) from disk.");
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[WorkflowManager] Failed to load jobs: {ex}");
+            AtlasLogger.LogException(ex, "Failed to load jobs");
         }
     }
 
@@ -452,14 +458,20 @@ public static class WorkflowManager
                 Directory.Exists(job.JobFolderPath))
             {
                 Directory.Delete(job.JobFolderPath, true);
+                AtlasLogger.LogJob($"Deleted job folder: {job.JobFolderPath}");
             }
 
             // Remove from runtime list
-            return Jobs.Remove(job);
+            bool removed = Jobs.Remove(job);
+            if (removed)
+            {
+                AtlasLogger.LogJob($"Deleted job {job.JobId}");
+            }
+            return removed;
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[WorkflowManager] Failed to delete job {job.JobId}: {ex}");
+            AtlasLogger.LogException(ex, $"Failed to delete job {job.JobId}");
             return false;
         }
     }

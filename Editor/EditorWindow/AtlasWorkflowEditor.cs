@@ -49,6 +49,9 @@ public class AtlasWorkflowEditor : EditorWindow
         state = LoadAsset<AtlasWorkflowState>("AtlasWorkflowState");
         if (state == null) { root.Add(new Label("Critical Error: AtlasWorkflowState asset not found.")); return; }
 
+        // --- Cleanup old temp files on editor window open ---
+        AssetExporter.CleanupTempFiles();
+
 
 
 
@@ -143,7 +146,6 @@ public class AtlasWorkflowEditor : EditorWindow
 
         // 2) Create the job from the per-job state (snapshots from jobState)
         var job = WorkflowManager.CreateJobFromState(jobState);
-        //Debug.Log($"[AtlasWorkflowEditor] Running job {job.JobId}");
 
         // Show "Running" immediately in both panels
         historyView.Refresh(WorkflowManager.Jobs);
@@ -206,7 +208,15 @@ public class AtlasWorkflowEditor : EditorWindow
             if (runningJobsView != null)
                 runningJobsView.Refresh(WorkflowManager.Jobs);
 
-            Debug.LogException(ex);
+            AtlasLogger.LogException(ex, "Workflow execution failed");
+        }
+        finally
+        {
+            // --- Memory cleanup: Destroy the cloned ScriptableObject to prevent memory leaks ---
+            if (jobState != null)
+            {
+                DestroyImmediate(jobState);
+            }
         }
     }
 
@@ -250,7 +260,7 @@ public class AtlasWorkflowEditor : EditorWindow
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[AtlasWorkflowEditor] Failed to copy output files: {ex}");
+            AtlasLogger.LogException(ex, "Failed to copy output files to job folder");
         }
     }
 
@@ -322,7 +332,7 @@ public class AtlasWorkflowEditor : EditorWindow
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[AtlasWorkflowEditor] Failed to prepare input files for job: {ex}");
+            AtlasLogger.LogException(ex, "Failed to prepare input files for job");
         }
 
         return result;
@@ -370,7 +380,7 @@ public class AtlasWorkflowEditor : EditorWindow
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[AtlasWorkflowEditor] Failed to map output '{outputState.ParamId}': {ex}");
+                AtlasLogger.LogException(ex, $"Failed to map output '{outputState.ParamId}'");
             }
         }
     }

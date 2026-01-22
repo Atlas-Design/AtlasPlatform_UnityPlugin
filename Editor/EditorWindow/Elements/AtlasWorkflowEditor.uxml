@@ -2,7 +2,7 @@
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/AtlasWorkflowEditor.uss?fileID=7433441132597879392&amp;guid=f7fba480d79272445a15f031bc6895be&amp;type=3#AtlasWorkflowEditor" />
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss?fileID=7433441132597879392&amp;guid=137bd3f6517b35648a6975ef73eb63d3&amp;type=3#_ParamStyles" />
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_WorkflowJobView.uss?fileID=7433441132597879392&amp;guid=651450396d11c3f4bb26a4a9c5541b56&amp;type=3#_WorkflowJobView" />
-    <ui:VisualElement name="main-container">
+    <ui:VisualElement name="main-container" style="flex-shrink: 0;">
         <ui:VisualElement style="flex-grow: 1; background-color: rgb(0, 0, 0); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
             <ui:Label text="Atlas Studio" style="-unity-text-outline-color: rgba(255, 255, 255, 0); color: rgb(255, 255, 255); font-size: 16px; -unity-font-style: bold;" />
         </ui:VisualElement>

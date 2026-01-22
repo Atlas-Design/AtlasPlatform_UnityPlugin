@@ -96,7 +96,7 @@ public class RunningJobsView
             totalTimeField.text = "(" + FormatTimeSpan(elapsed) + ")";
         }
 
-        // Spinner-style progress bar using schedule.Execute (your old pattern)
+        // Spinner-style progress bar with proper cleanup
         if (progressBar != null)
         {
             if (job.Status == JobStatus.Running)
@@ -106,8 +106,17 @@ public class RunningJobsView
                 float v = 0f;
                 var startTime = job.CreatedAtUtc;
 
-                progressBar.schedule.Execute(() =>
+                // Store the scheduled item so we can stop it later
+                IVisualElementScheduledItem scheduledItem = null;
+                scheduledItem = progressBar.schedule.Execute(() =>
                 {
+                    // Safety check: stop if element is no longer attached to panel
+                    if (header.panel == null)
+                    {
+                        scheduledItem?.Pause();
+                        return;
+                    }
+
                     v = (v + 3f) % 100f;
                     progressBar.value = v;
 
@@ -116,6 +125,12 @@ public class RunningJobsView
                         totalTimeField.text = "(" + FormatTimeSpan(elapsed) + ")";
 
                 }).Every(50);
+
+                // Stop the scheduled task when the element is removed from the visual tree
+                header.RegisterCallback<DetachFromPanelEvent>(evt =>
+                {
+                    scheduledItem?.Pause();
+                });
             }
             else
             {

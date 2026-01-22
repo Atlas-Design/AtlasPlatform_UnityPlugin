@@ -77,11 +77,11 @@ public class WorkflowStateController
             }
 
             EditorUtility.SetDirty(state);
-            //Debug.Log($"Successfully loaded workflow: {wf.Name}");
+            AtlasLogger.Log($"Successfully loaded workflow: {wf.Name}");
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"Failed to load or parse workflow at {filePath}: {e.Message}");
+            AtlasLogger.LogException(e, $"Failed to load or parse workflow at {filePath}");
             ClearState();
         }
     }

@@ -26,6 +26,7 @@ It allows you to:
 - Import or reveal generated assets
 
 Each workflow execution is tracked as a **Job**, with full input/output snapshots.
+
 ---
 ## Core concepts
 
@@ -143,10 +144,10 @@ Paste: https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin.git
 
 
 ## Where files go
-
+h
 - **Temporary exports & downloads**  
   OS temp directory under:  UnityAtlasWorkflow/
-  
+
 - **Job history**  
 Stored next to the Unity project (outside `Assets/`): AtlasWorkflowJobs/
 
