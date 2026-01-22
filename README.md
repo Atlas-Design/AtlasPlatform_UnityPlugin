@@ -456,57 +456,6 @@ AtlasWorkflowJobs/
 
 ---
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    AtlasWorkflowEditor                      │
-│                    (Main Editor Window)                     │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ WorkflowJob  │  │ JobHistory   │  │ RunningJobs      │  │
-│  │ View         │  │ View         │  │ View             │  │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
-│         │                 │                    │            │
-│  ┌──────┴─────────────────┴────────────────────┴─────────┐  │
-│  │              WorkflowUIBuilder                        │  │
-│  │              WorkflowParamRenderer                    │  │
-│  └───────────────────────┬───────────────────────────────┘  │
-└──────────────────────────┼──────────────────────────────────┘
-                           │
-┌──────────────────────────┼──────────────────────────────────┐
-│                    Logic Layer                              │
-├──────────────────────────┼──────────────────────────────────┤
-│  ┌───────────────┐  ┌────┴────────┐  ┌───────────────────┐  │
-│  │ Workflow      │  │ Workflow    │  │ Settings          │  │
-│  │ StateController│ │ Manager     │  │ Manager           │  │
-│  └───────┬───────┘  └──────┬──────┘  └─────────┬─────────┘  │
-│          │                 │                   │            │
-│  ┌───────┴─────────────────┴───────────────────┴─────────┐  │
-│  │              AtlasAPIController                       │  │
-│  │              AssetExporter                            │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │   Atlas Platform API   │
-              │   (External Service)   │
-              └────────────────────────┘
-```
-
-### Key Components
-
-| Component | Responsibility |
-|-----------|----------------|
-| `AtlasWorkflowEditor` | Main editor window, UI orchestration |
-| `WorkflowStateController` | Manages active workflow state |
-| `WorkflowManager` | Job lifecycle, persistence, library management |
-| `AtlasAPIController` | HTTP communication with Atlas Platform |
-| `AssetExporter` | Texture/mesh export and temp file management |
-| `SettingsManager` | EditorPrefs-based configuration |
-
----
 
 ## 🔧 Troubleshooting
 
@@ -568,48 +517,6 @@ Enable verbose logging for detailed diagnostics:
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-### Reporting Issues
-
-1. Check existing [Issues](https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin/issues)
-2. Create a new issue with:
-   - Unity version
-   - Plugin version
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Console logs (with verbose logging enabled)
-
-### Submitting Changes
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Test thoroughly in Unity 2022.3+
-5. Commit with clear messages: `git commit -m "Add amazing feature"`
-6. Push to your fork: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin.git
-
-# Open in Unity 2022.3+
-# The package will auto-resolve dependencies
-```
-
-### Code Style
-
-- Follow [Microsoft C# Coding Conventions](https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Use XML documentation comments for public APIs
-- Keep methods focused and under 50 lines when possible
-
----
-
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
@@ -626,23 +533,9 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software...
 ```
 
----
-
-## 🔗 Links
-
-- [Atlas Platform](https://atlas-platform.com) — Main platform website
-- [Documentation](https://docs.atlas-platform.com) — Full platform documentation
-- [Discord Community](https://discord.gg/atlas) — Join our community
-- [Issue Tracker](https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin/issues) — Report bugs
 
 ---
 
 <p align="center">
   <strong>Built with ❤️ by the Atlas Team</strong>
-</p>
-
-<p align="center">
-  <a href="https://atlas-platform.com">Website</a> •
-  <a href="https://twitter.com/AtlasPlatform">Twitter</a> •
-  <a href="https://discord.gg/atlas">Discord</a>
 </p>
