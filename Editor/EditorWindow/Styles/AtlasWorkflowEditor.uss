@@ -169,3 +169,29 @@
     border-color: rgb(110, 150, 115);
     color: white;
 }
+
+.library-delete-btn {
+    margin-left: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: rgb(100, 60, 60);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(130, 80, 80);
+    color: rgb(240, 200, 200);
+    flex-shrink: 0;
+    min-width: 24px;
+}
+
+.library-delete-btn:hover {
+    background-color: rgb(140, 70, 70);
+    border-color: rgb(170, 100, 100);
+    color: white;
+}
+
+.library-delete-btn:disabled {
+    background-color: rgb(60, 60, 60);
+    border-color: rgb(80, 80, 80);
+    color: rgb(120, 120, 120);
+}

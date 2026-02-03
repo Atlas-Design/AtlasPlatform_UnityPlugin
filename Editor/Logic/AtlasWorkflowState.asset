@@ -12,32 +12,72 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
   m_Name: AtlasWorkflowState
   m_EditorClassIdentifier: 
-  ActiveApiId: c835436e-c85c-4ba8-bdeb-f1585e5ae525
-  ActiveName: API_ModuleGenerator
-  BaseUrl: https://api.prod.atlas.design
+  ActiveApiId: a5f22a08-7d3d-47a0-a48f-07e3763582af
+  ActiveName: Test_API_NoUploads
+  BaseUrl: https://api.dev.atlas.design
   Version: 0.1
   Inputs:
-  - ParamId: input_image
-    Label: input_image
-    ParamType: 3
-    SourceType: 1
-    BoolValue: 0
+  - ParamId: input_boolean
+    Label: input_boolean
+    ParamType: 0
+    SourceType: 0
+    BoolValue: 1
     NumberValue: 0
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:/Users/matan/Desktop/facade.png
+    FilePath: 
+  - ParamId: input_number
+    Label: input_number
+    ParamType: 1
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 1
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
+  - ParamId: input_text
+    Label: input_text
+    ParamType: 2
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: images
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
   Outputs:
-  - ParamId: output_mesh
-    Label: output_mesh
-    ParamType: 4
+  - ParamId: output_boolean
+    Label: output_boolean
+    ParamType: 0
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_mesh_9cc96827-392c-4041-abfc-ecac39dbfbfd.glb
+    FilePath: 
+  - ParamId: output_text
+    Label: output_text
+    ParamType: 2
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
+  - ParamId: output_number
+    Label: output_number
+    ParamType: 1
+    SourceType: 0
+    BoolValue: 0
+    NumberValue: 0
+    StringValue: 
+    ImageValue: {fileID: 0}
+    MeshValue: {fileID: 0}
+    FilePath: 
   IsJobRunning: 0
   JobStatus: 
   JobProgress: 0

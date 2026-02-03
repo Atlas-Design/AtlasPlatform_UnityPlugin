@@ -12,6 +12,9 @@ public class WorkflowParamRenderer
     private readonly AtlasWorkflowState state;
     private readonly VisualTreeAsset boolIn, numIn, strIn, imgIn, meshIn;
     private readonly VisualTreeAsset boolOut, numOut, strOut, imgOut, meshOut;
+    
+    // Current job context for import folder generation
+    private AtlasWorkflowJobState currentJob;
 
     public WorkflowParamRenderer(AtlasWorkflowState state)
     {
@@ -29,6 +32,99 @@ public class WorkflowParamRenderer
         strOut = LoadTemplate("_ParamOutputString");
         imgOut = LoadTemplate("_ParamOutputImage");
         meshOut = LoadTemplate("_ParamOutputMesh");
+    }
+
+    /// <summary>
+    /// Sets the current job context for rendering outputs.
+    /// Call this before rendering outputs to enable proper import folder detection.
+    /// </summary>
+    public void SetJobContext(AtlasWorkflowJobState job)
+    {
+        currentJob = job;
+    }
+
+    /// <summary>
+    /// Clears the job context (use when rendering live workflow, not history).
+    /// </summary>
+    public void ClearJobContext()
+    {
+        currentJob = null;
+    }
+
+    /// <summary>
+    /// Gets the import folder path for the current job context.
+    /// Format: {BaseSavePath}/{WorkflowName}/{Date}_{ShortJobId}/
+    /// </summary>
+    private string GetImportFolderPath()
+    {
+        if (currentJob == null)
+            return null;
+
+        string basePath = SettingsManager.GetSavePath();
+        if (string.IsNullOrEmpty(basePath))
+            basePath = "Assets/Atlas/Imported";
+
+        // Sanitize workflow name for folder
+        string workflowName = SanitizeFolderName(currentJob.WorkflowName ?? "UnknownWorkflow");
+        
+        // Format: 2026-02-03_143052_a1b2c3d4
+        string dateStr = currentJob.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd_HHmmss");
+        string shortId = currentJob.JobId?.Length >= 8 ? currentJob.JobId.Substring(0, 8) : currentJob.JobId ?? "unknown";
+        string folderName = $"{dateStr}_{shortId}";
+
+        return $"{basePath}/{workflowName}/{folderName}";
+    }
+
+    /// <summary>
+    /// Tries to find an existing imported prefab for the current job and param.
+    /// </summary>
+    private GameObject FindExistingImportedPrefab(string paramId)
+    {
+        string folder = GetImportFolderPath();
+        if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+            return null;
+
+        // Look for prefab with the param ID name
+        string sanitizedName = SanitizeFolderName(paramId);
+        string prefabPath = $"{folder}/{sanitizedName}.prefab";
+        
+        return AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+    }
+
+    /// <summary>
+    /// Tries to find an existing imported texture for the current job and param.
+    /// </summary>
+    private Texture2D FindExistingImportedTexture(string paramId)
+    {
+        string folder = GetImportFolderPath();
+        if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+            return null;
+
+        // Look for texture with the param ID name (try common extensions)
+        string sanitizedName = SanitizeFolderName(paramId);
+        string[] extensions = { ".png", ".jpg", ".jpeg" };
+        
+        foreach (var ext in extensions)
+        {
+            string texPath = $"{folder}/{sanitizedName}{ext}";
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            if (tex != null)
+                return tex;
+        }
+        
+        return null;
+    }
+
+    private static string SanitizeFolderName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "Unnamed";
+
+        foreach (char c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+
+        name = name.Replace(' ', '_');
+        return name;
     }
 
     public VisualElement RenderInput(AtlasWorkflowParamState param, bool isEditable)
@@ -367,29 +463,31 @@ public class WorkflowParamRenderer
         WorkflowGUIUtils.StyleTypeIndicator(root, outputState.ParamType);
 
         var preview = root.Q<Image>("preview-image");
-        var fileLabel = root.Q<Label>("file-label");
+        var importButton = root.Q<Button>("import-button");
+        var assetField = root.Q<ObjectField>("imported-asset-field");
 
-        string path = outputState.FilePath;
-        bool hasFile = !string.IsNullOrEmpty(path) && File.Exists(path);
-        string fileName = hasFile ? Path.GetFileName(path) : null;
+        string tempPath = outputState.FilePath;
+        bool hasFile = !string.IsNullOrEmpty(tempPath) && File.Exists(tempPath);
 
-        // Track texture for cleanup
-        Texture2D previewTexture = null;
-
-        // --- File label (both live + history) ---------------------------------
-        if (fileLabel != null)
+        // Setup ObjectField for imported texture
+        if (assetField != null)
         {
-            if (hasFile)
-            {
-                fileLabel.text = fileName;
-                fileLabel.tooltip = path;
-            }
-            else
-            {
-                fileLabel.text = "No image generated yet.";
-                fileLabel.tooltip = string.Empty;
-            }
+            assetField.objectType = typeof(Texture2D);
+            assetField.SetEnabled(false); // Read-only
         }
+
+        // Check for existing imported texture
+        Texture2D existingTexture = FindExistingImportedTexture(outputState.ParamId);
+        bool alreadyImported = existingTexture != null;
+
+        // Show existing texture in ObjectField
+        if (assetField != null && alreadyImported)
+        {
+            assetField.value = existingTexture;
+        }
+
+        // Track texture for cleanup (preview only)
+        Texture2D previewTexture = null;
 
         // --- Preview (both live + history) ------------------------------------
         if (preview != null)
@@ -405,7 +503,7 @@ public class WorkflowParamRenderer
                 // Load thumbnail from file
                 try
                 {
-                    var bytes = File.ReadAllBytes(path);
+                    var bytes = File.ReadAllBytes(tempPath);
                     previewTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                     if (previewTexture.LoadImage(bytes))
                     {
@@ -413,7 +511,6 @@ public class WorkflowParamRenderer
                     }
                     else
                     {
-                        // Failed to load - clean up immediately
                         UnityEngine.Object.DestroyImmediate(previewTexture);
                         previewTexture = null;
                     }
@@ -421,7 +518,6 @@ public class WorkflowParamRenderer
                 catch (Exception ex)
                 {
                     AtlasLogger.LogWarning($"Failed to load image preview: {ex.Message}");
-                    // Clean up on error
                     if (previewTexture != null)
                     {
                         UnityEngine.Object.DestroyImmediate(previewTexture);
@@ -429,20 +525,57 @@ public class WorkflowParamRenderer
                     }
                 }
 
-                // In live panel we let you click to reveal; history can be read-only
+                // Click to reveal in finder
                 if (editable)
                 {
                     preview.AddToClassList("clickable-output-image");
                     preview.RegisterCallback<ClickEvent>(evt =>
                     {
                         if (evt.button == 0)
-                            EditorUtility.RevealInFinder(path);
+                            EditorUtility.RevealInFinder(tempPath);
                     });
                 }
             }
         }
 
-        // --- Memory cleanup: Destroy texture when element is removed from hierarchy ---
+        // --- Import Button ---
+        if (importButton != null)
+        {
+            if (!hasFile)
+            {
+                importButton.text = "No file yet";
+                importButton.SetEnabled(false);
+            }
+            else if (editable)
+            {
+                importButton.text = alreadyImported ? "Re-import" : "Import Image";
+                importButton.SetEnabled(true);
+
+                importButton.clicked += () =>
+                {
+                    ImportImageToAssets(tempPath, outputState.ParamId, assetField);
+                };
+            }
+            else
+            {
+                // JOB HISTORY: read-only, open file location
+                importButton.text = Path.GetFileName(tempPath) ?? "Open File";
+                importButton.SetEnabled(true);
+
+                importButton.clicked += () =>
+                {
+                    EditorUtility.RevealInFinder(tempPath);
+                };
+
+                // Hide asset field in history
+                if (assetField != null)
+                {
+                    assetField.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        // --- Memory cleanup: Destroy preview texture when element is removed ---
         root.RegisterCallback<DetachFromPanelEvent>(evt =>
         {
             if (previewTexture != null)
@@ -454,6 +587,84 @@ public class WorkflowParamRenderer
 
         return root;
     }
+
+    /// <summary>
+    /// Imports an image file to the Assets folder using job-based folder structure.
+    /// </summary>
+    private void ImportImageToAssets(string sourcePath, string paramId, ObjectField assetField)
+    {
+        // Use job-based folder path if available
+        string folder = GetImportFolderPath();
+        if (string.IsNullOrEmpty(folder))
+        {
+            folder = SettingsManager.GetSavePath();
+            if (string.IsNullOrEmpty(folder))
+                folder = "Assets/Atlas/Imported";
+        }
+
+        try
+        {
+            // Ensure folder exists
+            EnsureFolderExists(folder);
+
+            // Determine output path
+            string sanitizedName = SanitizeFolderName(paramId);
+            string extension = Path.GetExtension(sourcePath).ToLower();
+            if (string.IsNullOrEmpty(extension))
+                extension = ".png";
+            
+            string destPath = $"{folder}/{sanitizedName}{extension}";
+
+            // Copy file
+            File.Copy(sourcePath, destPath, overwrite: true);
+            
+            // Import to AssetDatabase
+            AssetDatabase.ImportAsset(destPath, ImportAssetOptions.ForceSynchronousImport);
+            
+            // Load the imported texture
+            Texture2D importedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(destPath);
+            
+            if (importedTex != null)
+            {
+                Debug.Log($"[Atlas] Successfully imported image: {destPath}");
+                
+                if (assetField != null)
+                {
+                    assetField.value = importedTex;
+                }
+                
+                EditorGUIUtility.PingObject(importedTex);
+            }
+            else
+            {
+                Debug.LogError($"[Atlas] Failed to load imported image: {destPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Atlas] Error importing image: {ex.Message}\n{ex.StackTrace}");
+        }
+    }
+
+    /// <summary>
+    /// Ensures an asset folder exists, creating it recursively if needed.
+    /// </summary>
+    private static void EnsureFolderExists(string path)
+    {
+        if (AssetDatabase.IsValidFolder(path))
+            return;
+
+        string parent = Path.GetDirectoryName(path)?.Replace("\\", "/");
+        string folderName = Path.GetFileName(path);
+
+        if (string.IsNullOrEmpty(parent))
+            parent = "Assets";
+
+        if (!AssetDatabase.IsValidFolder(parent))
+            EnsureFolderExists(parent);
+
+        AssetDatabase.CreateFolder(parent, folderName);
+    }
     private VisualElement CreateMeshOutput(AtlasWorkflowParamState outputState, bool editable)
     {
         var root = meshOut.CloneTree();
@@ -462,23 +673,57 @@ public class WorkflowParamRenderer
         WorkflowGUIUtils.StyleTypeIndicator(root, outputState.ParamType);
 
         var importButton = root.Q<Button>("import-button");
+        var importInstanceButton = root.Q<Button>("import-instance-button");
         var assetField = root.Q<ObjectField>("imported-asset-field");
 
         if (assetField != null)
+        {
             assetField.objectType = typeof(GameObject);
+            // Make read-only - users shouldn't manually change this, it shows the imported asset
+            assetField.SetEnabled(false);
+        }
 
         string tempPath = outputState.FilePath;
         bool hasFile = !string.IsNullOrEmpty(tempPath) && File.Exists(tempPath);
         string fileName = hasFile ? Path.GetFileName(tempPath) : null;
 
-        // Helper to fill the ObjectField after import (live panel only)
-        void RefreshAssetField(string assetPath)
+        // Check for existing imported prefab
+        GameObject existingPrefab = FindExistingImportedPrefab(outputState.ParamId);
+        bool alreadyImported = existingPrefab != null;
+        
+        // Show existing prefab in ObjectField
+        if (assetField != null && alreadyImported)
         {
-            if (assetField == null) return;
-            GameObject go = string.IsNullOrEmpty(assetPath)
-                ? null
-                : AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
-            assetField.value = go;
+            assetField.value = existingPrefab;
+        }
+
+        // Helper to instantiate prefab at scene view camera position
+        void InstantiatePrefabAtCamera(GameObject prefab)
+        {
+            if (prefab == null) return;
+            
+            // Get the scene view camera position
+            Vector3 spawnPosition = Vector3.zero;
+            Quaternion spawnRotation = Quaternion.identity;
+            
+            SceneView sceneView = SceneView.lastActiveSceneView;
+            if (sceneView != null && sceneView.camera != null)
+            {
+                // Position in front of camera
+                Camera cam = sceneView.camera;
+                spawnPosition = cam.transform.position + cam.transform.forward * 5f;
+                spawnRotation = Quaternion.Euler(0, cam.transform.eulerAngles.y, 0);
+            }
+            
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            instance.transform.position = spawnPosition;
+            instance.transform.rotation = spawnRotation;
+            
+            // Select the new instance and frame it
+            Selection.activeGameObject = instance;
+            Undo.RegisterCreatedObjectUndo(instance, "Import & Instance Mesh");
+            
+            AtlasLogger.Log($"Instantiated '{prefab.name}' at {spawnPosition}");
         }
 
         if (importButton != null)
@@ -491,7 +736,7 @@ public class WorkflowParamRenderer
             else if (editable)
             {
                 // LIVE PANEL: allow importing the mesh into Assets
-                importButton.text = "Import Mesh";
+                importButton.text = alreadyImported ? "Re-import" : "Import Mesh";
                 importButton.SetEnabled(true);
 
                 importButton.clicked += () =>
@@ -520,6 +765,45 @@ public class WorkflowParamRenderer
             }
         }
 
+        // Setup Import & Instance button
+        if (importInstanceButton != null)
+        {
+            if (!hasFile)
+            {
+                importInstanceButton.SetEnabled(false);
+            }
+            else if (editable)
+            {
+                // If already imported, just instance the existing prefab
+                if (alreadyImported)
+                {
+                    importInstanceButton.text = "Instance";
+                    importInstanceButton.clicked += () =>
+                    {
+                        InstantiatePrefabAtCamera(existingPrefab);
+                    };
+                }
+                else
+                {
+                    importInstanceButton.text = "Import & Instance";
+                    importInstanceButton.clicked += () =>
+                    {
+                        // Import first, then instantiate
+                        ImportMeshWithGLBImporter(tempPath, outputState.ParamId, assetField, (prefab) =>
+                        {
+                            InstantiatePrefabAtCamera(prefab);
+                        });
+                    };
+                }
+                importInstanceButton.SetEnabled(true);
+            }
+            else
+            {
+                // Hide in history view
+                importInstanceButton.style.display = DisplayStyle.None;
+            }
+        }
+
         return root;
     }
     #endregion
@@ -534,12 +818,19 @@ public class WorkflowParamRenderer
     /// <summary>
     /// Imports a GLB mesh using the custom Atlas GLBImporter.
     /// This creates mesh, textures, material, and prefab without external dependencies.
+    /// Uses job-based folder structure: {BasePath}/{WorkflowName}/{Date}_{ShortJobId}/
     /// </summary>
-    private void ImportMeshWithGLBImporter(string sourcePath, string paramId, ObjectField assetField)
+    /// <param name="onImported">Optional callback invoked with the imported prefab on success.</param>
+    private void ImportMeshWithGLBImporter(string sourcePath, string paramId, ObjectField assetField, Action<GameObject> onImported = null)
     {
-        string folder = SettingsManager.GetSavePath();
+        // Use job-based folder path if available, otherwise fall back to settings
+        string folder = GetImportFolderPath();
         if (string.IsNullOrEmpty(folder))
-            folder = "Assets";
+        {
+            folder = SettingsManager.GetSavePath();
+            if (string.IsNullOrEmpty(folder))
+                folder = "Assets/Atlas/Imported";
+        }
 
         try
         {
@@ -556,6 +847,9 @@ public class WorkflowParamRenderer
                 }
                 
                 EditorGUIUtility.PingObject(result.Prefab);
+                
+                // Invoke callback if provided
+                onImported?.Invoke(result.Prefab);
             }
             else
             {

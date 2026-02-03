@@ -6,7 +6,10 @@
             <ui:Label name="label" text="Output Mesh" class="param-label" />
         </ui:VisualElement>
         <ui:VisualElement class="param-input-box">
-            <ui:Button name="import-button" text="Import Mesh" style="margin-bottom: 4px;" />
+            <ui:VisualElement style="flex-direction: row; margin-bottom: 4px;">
+                <ui:Button name="import-button" text="Import Mesh" style="flex-grow: 1; margin-right: 4px;" />
+                <ui:Button name="import-instance-button" text="Import &amp; Instance" style="flex-grow: 1;" />
+            </ui:VisualElement>
             <uie:ObjectField name="imported-asset-field" />
         </ui:VisualElement>
     </ui:VisualElement>

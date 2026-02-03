@@ -106,6 +106,9 @@ public class WorkflowJobView : VisualElement
         if (job == null || renderer == null)
             return;
 
+        // Set job context for import folder detection
+        renderer.SetJobContext(job);
+
         // --- Header: workflow name ---
         if (workflowNameLabel != null)
         {

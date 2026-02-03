@@ -2,11 +2,11 @@
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/AtlasWorkflowEditor.uss?fileID=7433441132597879392&amp;guid=f7fba480d79272445a15f031bc6895be&amp;type=3#AtlasWorkflowEditor" />
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss?fileID=7433441132597879392&amp;guid=137bd3f6517b35648a6975ef73eb63d3&amp;type=3#_ParamStyles" />
     <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_WorkflowJobView.uss?fileID=7433441132597879392&amp;guid=651450396d11c3f4bb26a4a9c5541b56&amp;type=3#_WorkflowJobView" />
-    <ui:VisualElement name="main-container" style="flex-shrink: 0;">
-        <ui:VisualElement style="flex-grow: 1; background-color: rgb(0, 0, 0); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
+    <ui:VisualElement name="main-container" style="flex-grow: 1; flex-direction: column;">
+        <ui:VisualElement style="flex-shrink: 0; background-color: rgb(0, 0, 0); padding: 5px;">
             <ui:Label text="Atlas Studio" style="-unity-text-outline-color: rgba(255, 255, 255, 0); color: rgb(255, 255, 255); font-size: 16px; -unity-font-style: bold;" />
         </ui:VisualElement>
-        <ui:VisualElement name="library-section" class="section-box primary-panel">
+        <ui:VisualElement name="library-section" class="section-box primary-panel" style="flex-shrink: 0;">
             <ui:VisualElement class="panel-header">
                 <ui:Label text="Workflow Library" class="panel-header__title primary-panel__title" />
             </ui:VisualElement>
@@ -15,31 +15,32 @@
                     <ui:VisualElement name="library-active-dot" class="library-active-dot" />
                     <ui:DropdownField name="library-dropdown" class="library-dropdown" />
                     <ui:Button name="load-file-button" text="Import" class="library-import-btn" tooltip="Import workflow from JSON file" />
+                    <ui:Button name="delete-workflow-button" text="✕" class="library-delete-btn" tooltip="Delete selected workflow" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="current-workflow-panel" class="section-box primary-panel">
+        <ui:VisualElement name="current-workflow-panel" class="section-box primary-panel" style="flex-shrink: 0;">
             <ui:VisualElement class="panel-header">
                 <ui:Label text="Current Workflow" class="panel-header__title primary-panel__title" />
             </ui:VisualElement>
             <ui:VisualElement class="panel-body">
-                <ui:VisualElement name="job-view-container" style="padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;" />
+                <ui:VisualElement name="job-view-container" style="padding: 5px;" />
                 <ui:Button name="run-workflow-button" text="Run Workflow" class="hidden" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="running-jobs-panel" class="section-box primary-panel">
+        <ui:VisualElement name="running-jobs-panel" class="section-box primary-panel" style="flex-shrink: 0;">
             <ui:VisualElement class="panel-header">
                 <ui:Label text="Running Jobs" class="panel-header__title primary-panel__title" />
             </ui:VisualElement>
             <ui:ScrollView name="running-jobs-list" />
         </ui:VisualElement>
-        <ui:VisualElement name="jobs-panel" class="section-box primary-panel" style="padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;">
-            <ui:VisualElement class="panel-header">
+        <ui:VisualElement name="jobs-panel" class="section-box primary-panel" style="flex-grow: 1; flex-direction: column; overflow: hidden; padding: 0;">
+            <ui:VisualElement class="panel-header" style="flex-shrink: 0;">
                 <ui:Label text="Jobs History" class="panel-header__title primary-panel__title" />
                 <ui:VisualElement style="flex-grow: 1;" />
                 <ui:Button name="jobs-menu-btn" text="⋮" class="panel-menu-btn" tooltip="Options" />
             </ui:VisualElement>
-            <ui:VisualElement class="panel-body">
+            <ui:VisualElement class="panel-body" style="flex-grow: 1; overflow: hidden;">
                 <ui:ScrollView name="jobs-list" />
             </ui:VisualElement>
         </ui:VisualElement>

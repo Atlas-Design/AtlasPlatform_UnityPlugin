@@ -2,8 +2,8 @@
 <ui:Style src="../Styles/AtlasWorkflowEditor.uss" />
 <ui:Style src="../Styles/_WorkflowJobView.uss" />
 
-<ui:VisualElement name="RootSplit" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-        <ui:VisualElement name="LeftPane" class="jobs-split-pane jobs-split-pane--left" style="flex-grow: 1; max-width: 250px; width: 250px; min-width: 250px;" />
+<ui:VisualElement name="RootSplit" style="flex-grow: 1; flex-direction: row; overflow: hidden;">
+        <ui:VisualElement name="LeftPane" class="jobs-split-pane jobs-split-pane--left" style="width: 250px; min-width: 200px; max-width: 300px; flex-shrink: 0;" />
         <ui:VisualElement name="RightPane" class="jobs-split-pane jobs-split-pane--right" style="flex-grow: 1;" />
     </ui:VisualElement>
 </ui:UXML>

@@ -21,6 +21,7 @@ public class AtlasWorkflowEditor : EditorWindow
 
     // --- UI Element References ---
     private Button loadFileButton;
+    private Button deleteWorkflowButton;
     private DropdownField libraryDropdown;
     private VisualElement libraryActiveDot;
     private VisualElement jobViewContainer;
@@ -36,7 +37,7 @@ public class AtlasWorkflowEditor : EditorWindow
     // A reference to our custom UI component instance
 
 
-    [MenuItem("Window/Atlas Workflow")]
+    [MenuItem("Atlas/Workflow Editor")]
     public static void ShowWindow() { GetWindow<AtlasWorkflowEditor>("Atlas Workflow"); }
 
     #region Lifecycle & Initialization
@@ -93,6 +94,7 @@ public class AtlasWorkflowEditor : EditorWindow
     private void QueryUIElements(VisualElement root)
     {
         loadFileButton = root.Q<Button>("load-file-button");
+        deleteWorkflowButton = root.Q<Button>("delete-workflow-button");
         libraryDropdown = root.Q<DropdownField>("library-dropdown");
         libraryActiveDot = root.Q<VisualElement>("library-active-dot");
         jobViewContainer = root.Q<VisualElement>("job-view-container");
@@ -110,6 +112,12 @@ public class AtlasWorkflowEditor : EditorWindow
         loadFileButton.clicked += OnLoadFromFileClicked;
         libraryDropdown.RegisterValueChangedCallback(OnLibrarySelectionChanged);
         runWorkflowButton.clicked += OnRunWorkflowClicked;
+
+        // Delete workflow button
+        if (deleteWorkflowButton != null)
+        {
+            deleteWorkflowButton.clicked += OnDeleteWorkflowClicked;
+        }
 
         // Jobs History menu button
         if (jobsMenuBtn != null)
@@ -157,6 +165,50 @@ public class AtlasWorkflowEditor : EditorWindow
         string filePath = Path.Combine(WorkflowManager.GetLibraryDirectory(), evt.newValue);
         stateController.LoadWorkflowFromFile(filePath);
         UpdateUIBasedOnState();
+    }
+
+    private void OnDeleteWorkflowClicked()
+    {
+        string selectedWorkflow = libraryDropdown.value;
+        
+        // Check if a valid workflow is selected
+        if (string.IsNullOrEmpty(selectedWorkflow) || 
+            selectedWorkflow == "Select a workflow..." || 
+            selectedWorkflow == "No workflows - click Import")
+        {
+            EditorUtility.DisplayDialog("No Workflow Selected", "Please select a workflow to delete.", "OK");
+            return;
+        }
+
+        // Confirm deletion
+        bool confirm = EditorUtility.DisplayDialog(
+            "Delete Workflow",
+            $"Are you sure you want to delete '{selectedWorkflow}'?\n\nThis action cannot be undone.",
+            "Delete",
+            "Cancel"
+        );
+
+        if (!confirm)
+            return;
+
+        // Delete the workflow
+        bool deleted = WorkflowManager.DeleteWorkflowFromLibrary(selectedWorkflow);
+        
+        if (deleted)
+        {
+            // Clear the current state if we deleted the active workflow
+            stateController.ClearState();
+            
+            // Refresh the dropdown
+            PopulateLibraryDropdown();
+            UpdateUIBasedOnState();
+            
+            Debug.Log($"[Atlas] Deleted workflow: {selectedWorkflow}");
+        }
+        else
+        {
+            EditorUtility.DisplayDialog("Error", $"Failed to delete workflow '{selectedWorkflow}'.", "OK");
+        }
     }
 
     #endregion
@@ -437,6 +489,12 @@ public class AtlasWorkflowEditor : EditorWindow
         // Update library active dot
         if (libraryActiveDot != null)
             libraryActiveDot.EnableInClassList("inactive", !isWorkflowLoaded);
+
+        // Update delete button - only enabled when a workflow is selected
+        if (deleteWorkflowButton != null)
+        {
+            deleteWorkflowButton.SetEnabled(isWorkflowLoaded);
+        }
 
         // Update dropdown placeholder when no workflow loaded
         if (!isWorkflowLoaded)

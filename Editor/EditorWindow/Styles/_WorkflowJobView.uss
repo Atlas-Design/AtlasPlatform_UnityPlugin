@@ -4,6 +4,13 @@
     border-radius: 4px;
     background-color: rgb(55, 55, 55);
     margin: 5px;
+    flex-grow: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#job-content-scroll {
+    flex-grow: 1;
 }
 
 /* ========================================
@@ -78,6 +85,7 @@
 .jobs-split-pane {
     flex-grow: 1;
     padding: 4px;
+    overflow: hidden;
 }
 
 .jobs-split-pane--left {
@@ -85,11 +93,13 @@
     border-right-width: 1px;
     border-right-color: rgb(51, 51, 51);
     /**border-right-style: solid;*/
+    flex-direction: column;
 }
 
 .jobs-split-pane--right {
     background-color: rgb(43, 43, 43);
     padding-left: 6px;
+    flex-direction: column;
 }
 
 .job-history-row {
@@ -119,12 +129,10 @@
 }
 
 #jobs-panel {
-    padding: 4px;
+    padding: 0;
     background-color: rgb(32, 32, 32);
-    padding-top: 0;
-    padding-right: 0;
-    padding-bottom: 0;
-    padding-left: 0;
+    flex-grow: 1;
+    overflow: hidden;
 }
 
 .job-status-indicator {

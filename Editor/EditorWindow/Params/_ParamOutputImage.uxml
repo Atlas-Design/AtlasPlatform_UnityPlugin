@@ -7,7 +7,10 @@
         </ui:VisualElement>
         <ui:VisualElement class="param-input-box">
             <ui:Image name="preview-image" style="height: 80px; margin-bottom: 4px;" />
-            <ui:Label name="file-label" text="No image generated yet." class="output-file-label" />
+            <ui:VisualElement style="flex-direction: row; margin-bottom: 4px;">
+                <ui:Button name="import-button" text="Import Image" style="flex-grow: 1;" />
+            </ui:VisualElement>
+            <uie:ObjectField name="imported-asset-field" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
