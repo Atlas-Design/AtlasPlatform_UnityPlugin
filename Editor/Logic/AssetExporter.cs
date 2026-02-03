@@ -75,7 +75,8 @@ public static class AssetExporter
     #region Model Operations
 
     /// <summary>
-    /// Configures GLTFast settings and exports the provided GameObject to a binary .glb file.
+    /// Exports the provided GameObject to a binary .glb file using GLTFast.
+    /// Used for uploading mesh inputs to the Atlas API.
     /// </summary>
     public static async Task<string> ExportGameObjectAsGlb(GameObject go)
     {
@@ -91,23 +92,20 @@ public static class AssetExporter
             GetTempDirectory(),
             $"{go.name}_{System.Guid.NewGuid()}.glb"
         );
+        
         var exportSettings = new ExportSettings
         {
             Format = GltfFormat.Binary,
             FileConflictResolution = FileConflictResolution.Overwrite,
             ImageDestination = ImageDestination.Automatic
-
-            // ComponentMask, LightIntensityFactor, etc. if you care
         };
 
         var goExportSettings = new GameObjectExportSettings
         {
             OnlyActiveInHierarchy = false
         };
-        // GameObjectExport is the correct type from GLTFast.Export
+        
         var export = new GameObjectExport(exportSettings, goExportSettings);
-
-        // You can keep the AddScene call exactly like this
         export.AddScene(new[] { go });
 
         bool success = await export.SaveToFileAndDispose(tempFilePath);

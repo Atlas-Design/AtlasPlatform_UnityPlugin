@@ -185,8 +185,11 @@ public class AtlasWorkflowEditor : EditorWindow
             // 3) Prepare inputs inside this job folder (mutates jobState.Inputs[].FilePath)
             var inputFilesForUpload = await PrepareInputFilesForJob(job, jobState);
 
-            // 4) Run workflow using the per-job state + job-local files
-            var outputResults = await AtlasAPIController.RunWorkflowAsync(jobState, inputFilesForUpload);
+            // 4) Run workflow using the new async polling API
+            var outputResults = await AtlasAPIController.RunWorkflowWithPollingAsync(
+                jobState, 
+                job,                    // Pass job to update ExecutionId/Status during polling
+                inputFilesForUpload);
 
             if (outputResults != null)
             {
@@ -219,7 +222,7 @@ public class AtlasWorkflowEditor : EditorWindow
             else
             {
                 statusLabel.text = "Failed";
-                WorkflowManager.MarkJobFailed(job, "RunWorkflowAsync returned null.");
+                WorkflowManager.MarkJobFailed(job, "Workflow execution returned null (check logs for details).");
                 historyView.Refresh(WorkflowManager.Jobs);
                 if (runningJobsView != null)
                     runningJobsView.Refresh(WorkflowManager.Jobs);

@@ -12,21 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
   m_Name: AtlasWorkflowState
   m_EditorClassIdentifier: 
-  ActiveApiId: 802e1766-a773-4629-a585-bb4f815c0339
-  ActiveName: Image
-  BaseUrl: https://api.dev.atlas.design
+  ActiveApiId: c835436e-c85c-4ba8-bdeb-f1585e5ae525
+  ActiveName: API_ModuleGenerator
+  BaseUrl: https://api.prod.atlas.design
   Version: 0.1
   Inputs:
-  - ParamId: input_text
-    Label: input_text
-    ParamType: 2
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 0
-    StringValue: make shorter
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
   - ParamId: input_image
     Label: input_image
     ParamType: 3
@@ -36,18 +26,18 @@ MonoBehaviour:
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:/Users/matan/Downloads/output_image.png
+    FilePath: C:/Users/matan/Desktop/facade.png
   Outputs:
-  - ParamId: output_image
-    Label: output_image
-    ParamType: 3
+  - ParamId: output_mesh
+    Label: output_mesh
+    ParamType: 4
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_image_cb5d6c11-d411-4fec-8107-6f13677ed67b.png
+    FilePath: C:\Users\matan\AppData\Local\Temp\UnityAtlasWorkflow\output_mesh_9cc96827-392c-4041-abfc-ecac39dbfbfd.glb
   IsJobRunning: 0
   JobStatus: 
   JobProgress: 0

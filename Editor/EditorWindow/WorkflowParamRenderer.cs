@@ -1,8 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using GLTFast;
-using GLTFast.Logging;
+using Atlas.Workflow;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -497,8 +496,8 @@ public class WorkflowParamRenderer
 
                 importButton.clicked += () =>
                 {
-                    // Use GLTFast Runtime API to bypass ScriptedImporter limitations
-                    ImportMeshWithGltfastRuntime(tempPath, outputState.ParamId, assetField);
+                    // Use custom GLB importer (no external dependencies)
+                    ImportMeshWithGLBImporter(tempPath, outputState.ParamId, assetField);
                 };
             }
             else
@@ -532,6 +531,45 @@ public class WorkflowParamRenderer
         EditorUtility.SetDirty(state);
     }
 
+    /// <summary>
+    /// Imports a GLB mesh using the custom Atlas GLBImporter.
+    /// This creates mesh, textures, material, and prefab without external dependencies.
+    /// </summary>
+    private void ImportMeshWithGLBImporter(string sourcePath, string paramId, ObjectField assetField)
+    {
+        string folder = SettingsManager.GetSavePath();
+        if (string.IsNullOrEmpty(folder))
+            folder = "Assets";
+
+        try
+        {
+            // Use our custom GLB importer
+            var result = GLBImporter.Import(sourcePath, folder, paramId);
+
+            if (result.Success && result.Prefab != null)
+            {
+                Debug.Log($"[Atlas] Successfully imported mesh: {result.PrefabPath}");
+                
+                if (assetField != null)
+                {
+                    assetField.value = result.Prefab;
+                }
+                
+                EditorGUIUtility.PingObject(result.Prefab);
+            }
+            else
+            {
+                Debug.LogError($"[Atlas] GLB import failed: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Atlas] Error importing mesh: {ex.Message}\n{ex.StackTrace}");
+        }
+    }
+
+    #region DISABLED - Old GLTFast Import Code (kept for reference)
+    /*
     /// <summary>
     /// Editor-compatible defer agent that processes everything immediately (synchronously).
     /// This avoids the DontDestroyOnLoad issue in GLTFast's default defer agent.
@@ -573,7 +611,7 @@ public class WorkflowParamRenderer
     /// Imports a GLB mesh using GLTFast's Runtime API (more flexible than ScriptedImporter)
     /// and saves it as a prefab in the Assets folder.
     /// </summary>
-    private async void ImportMeshWithGltfastRuntime(string sourcePath, string paramId, ObjectField assetField)
+    private async void ImportMeshWithGltfastRuntime_DISABLED(string sourcePath, string paramId, ObjectField assetField)
     {
         string folder = SettingsManager.GetSavePath();
         if (string.IsNullOrEmpty(folder))
@@ -666,6 +704,8 @@ public class WorkflowParamRenderer
             Debug.LogError($"[Atlas] Error importing mesh: {ex.Message}\n{ex.StackTrace}");
         }
     }
+    */
+    #endregion
       
     private void SetupLabel(VisualElement row, string text)
     {

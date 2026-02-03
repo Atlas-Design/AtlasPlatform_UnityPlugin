@@ -135,6 +135,7 @@ public static class WorkflowManager
     public static void MarkJobSucceeded(AtlasWorkflowJobState job)
     {
         job.Status = JobStatus.Succeeded;
+        job.ExecutionStatus = ExecutionStatus.Completed;
         job.CompletedAtUtc = DateTime.UtcNow;
         job.Progress01 = 1f;
         SaveJobToDisk(job);
@@ -145,10 +146,13 @@ public static class WorkflowManager
 
     /// <summary>
     /// Marks a running job as Failed, records the error message, and saves to disk.
+    /// Note: Enhanced error details (ErrorNodeName, etc.) should be set on the job 
+    /// before calling this method if available from the API.
     /// </summary>
     public static void MarkJobFailed(AtlasWorkflowJobState job, string errorMessage)
     {
         job.Status = JobStatus.Failed;
+        job.ExecutionStatus = ExecutionStatus.Failed;
         job.CompletedAtUtc = DateTime.UtcNow;
         job.ErrorMessage = errorMessage;
         job.Progress01 = 1f;

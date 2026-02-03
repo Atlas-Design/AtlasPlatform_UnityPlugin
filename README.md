@@ -24,7 +24,7 @@
   <a href="#-contributing">Contributing</a>
 </p>
 
----
+--- 
 
 ## 📋 Table of Contents
 
