@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Styles/_ParamStyles.uss" />
+    <ui:VisualElement class="param-row-complex">
+        <ui:VisualElement class="param-row-header">
+            <ui:VisualElement name="type-indicator" class="type-indicator" />
+            <ui:Label name="label" text="Output Audio" class="param-label" />
+        </ui:VisualElement>
+        <ui:VisualElement class="param-input-box">
+            <ui:Label name="source-file-label" text="" class="file-path-label" style="margin-bottom: 4px;" />
+            <ui:VisualElement style="flex-direction: row; margin-bottom: 4px;">
+                <ui:Button name="import-button" text="Import Audio" style="flex-grow: 1;" />
+            </ui:VisualElement>
+            <uie:ObjectField name="imported-asset-field" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

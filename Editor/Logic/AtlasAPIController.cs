@@ -275,6 +275,10 @@ public static class AtlasAPIController
                             AtlasLogger.LogWarning($"No file path resolved for input '{input.ParamId}'.");
                         }
                         break;
+
+                    case ParamType.audio:
+                        AtlasLogger.LogWarning($"Audio input '{input.ParamId}' upload is not implemented yet.");
+                        break;
                 }
             }
         }
@@ -401,7 +405,14 @@ public static class AtlasAPIController
         StatusResponse statusResponse = null;
         while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromSeconds(pollIntervalSeconds), cancellationToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(pollIntervalSeconds), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
 
             statusResponse = await PollStatusAsync(submitResult.BaseUrl, submitResult.Version, submitResult.ExecutionId);
 
@@ -459,6 +470,15 @@ public static class AtlasAPIController
         if (cancellationToken.IsCancellationRequested)
         {
             AtlasLogger.LogWarning("Workflow polling was cancelled.");
+            if (job != null)
+            {
+                job.Status = JobStatus.Cancelled;
+                job.CompletedAtUtc = DateTime.UtcNow;
+                job.Progress01 = 1f;
+                job.ErrorMessage = "Cancelled by user.";
+                WorkflowManager.SaveJobToDisk(job);
+                WorkflowManager.NotifyJobsMutated();
+            }
             return null;
         }
 
@@ -475,7 +495,7 @@ public static class AtlasAPIController
         {
             foreach (var outputParam in state.Outputs)
             {
-                if ((outputParam.ParamType == ParamType.image || outputParam.ParamType == ParamType.mesh) &&
+                if (IsBinaryFileOutputParam(outputParam.ParamType) &&
                     outputResults.TryGetValue(outputParam.ParamId, out var fileIdObj))
                 {
                     string fileId = fileIdObj?.ToString();
@@ -570,6 +590,10 @@ public static class AtlasAPIController
                             AtlasLogger.LogWarning($"No file path resolved for input '{input.ParamId}'.");
                         }
                         break;
+
+                    case ParamType.audio:
+                        AtlasLogger.LogWarning($"Audio input '{input.ParamId}' upload is not implemented yet.");
+                        break;
                 }
             }
         }
@@ -642,7 +666,7 @@ public static class AtlasAPIController
             {
                 foreach (var outputParam in state.Outputs)
                 {
-                    if ((outputParam.ParamType == ParamType.image || outputParam.ParamType == ParamType.mesh) &&
+                    if (IsBinaryFileOutputParam(outputParam.ParamType) &&
                         outputResults.TryGetValue(outputParam.ParamId, out var fileIdObj))
                     {
                         string fileId = fileIdObj?.ToString();
@@ -683,7 +707,7 @@ public static class AtlasAPIController
                 return null;
             }
 
-            string extension = outputParam.ParamType == ParamType.image ? ".png" : ".glb";
+            string extension = GetBinaryDownloadExtension(outputParam);
             string tempFilePath = Path.Combine(AssetExporter.GetTempDirectory(), $"{outputParam.ParamId}_{fileId}{extension}");
 
             await File.WriteAllBytesAsync(tempFilePath, fileData);
@@ -699,6 +723,44 @@ public static class AtlasAPIController
         {
             AtlasLogger.LogError($"Download timed out for '{outputParam.ParamId}'. {e.Message}");
             return null;
+        }
+    }
+
+    private static bool IsBinaryFileOutputParam(ParamType paramType) =>
+        paramType == ParamType.image || paramType == ParamType.mesh || paramType == ParamType.audio;
+
+    /// <summary>
+    /// Temp file extension for downloaded binary outputs. Audio uses API <c>format</c> when safe; otherwise <c>.bin</c>.
+    /// </summary>
+    private static string GetBinaryDownloadExtension(AtlasWorkflowParamState outputParam)
+    {
+        switch (outputParam.ParamType)
+        {
+            case ParamType.image:
+                return ".png";
+            case ParamType.mesh:
+                return ".glb";
+            case ParamType.audio:
+            {
+                var fmt = outputParam.Format?.Trim();
+                if (string.IsNullOrEmpty(fmt))
+                    return ".bin";
+                fmt = fmt.TrimStart('.');
+                if (fmt.Length == 0)
+                    return ".bin";
+                foreach (var c in fmt)
+                {
+                    if (!char.IsLetterOrDigit(c) && c != '_' && c != '-')
+                    {
+                        AtlasLogger.LogWarning(
+                            $"Output '{outputParam.ParamId}': non-alphanumeric audio format '{outputParam.Format}', using .bin");
+                        return ".bin";
+                    }
+                }
+                return "." + fmt.ToLowerInvariant();
+            }
+            default:
+                return ".bin";
         }
     }
 

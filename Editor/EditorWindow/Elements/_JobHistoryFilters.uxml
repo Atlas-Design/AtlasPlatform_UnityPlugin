@@ -1,5 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:VisualElement name="filter-toolbar" class="filter-toolbar">
+        <ui:VisualElement name="view-mode-panel" class="view-mode-panel">
+            <ui:VisualElement class="view-mode-options-row">
+                <ui:Button name="view-mode-jobs" text="Jobs" class="view-mode-option view-mode-option--active" />
+                <ui:Button name="view-mode-batches" text="Batches" class="view-mode-option view-mode-option--last" />
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement class="filter-grid">
             <!-- Row 1: Labels -->
             <ui:VisualElement class="filter-labels-row">

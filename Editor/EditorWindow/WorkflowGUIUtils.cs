@@ -14,6 +14,7 @@ public static class WorkflowGUIUtils
             case ParamType.@string: return new Color32(0x52, 0x94, 0xE2, 0xFF); // Blue
             case ParamType.image: return new Color32(0xE6, 0xDB, 0x74, 0xFF);   // Yellow
             case ParamType.mesh: return new Color32(0xAE, 0x81, 0xFF, 0xFF);    // Purple
+            case ParamType.audio: return new Color32(0x2E, 0xCC, 0x71, 0xFF);   // Green
             default: return Color.grey;
         }
     }
@@ -42,7 +43,8 @@ public static class WorkflowGUIUtils
             case ParamType.number: return p.NumberValue.ToString("0.###");
             case ParamType.@string: return string.IsNullOrEmpty(p.StringValue) ? "(empty)" : p.StringValue;
             case ParamType.image:
-            case ParamType.mesh: return string.IsNullOrEmpty(p.FilePath) ? "(no file)" : Path.GetFileName(p.FilePath);
+            case ParamType.mesh:
+            case ParamType.audio: return string.IsNullOrEmpty(p.FilePath) ? "(no file)" : Path.GetFileName(p.FilePath);
             default: return "(unknown)";
         }
     }

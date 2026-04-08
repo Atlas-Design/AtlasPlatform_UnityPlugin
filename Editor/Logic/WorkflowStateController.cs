@@ -1,4 +1,4 @@
-﻿// In Packages/com.atlas.workflow/Editor/Logic/WorkflowStateController.cs
+// In Packages/com.atlas.workflow/Editor/Logic/WorkflowStateController.cs
 
 using System.IO;
 using UnityEditor;
@@ -71,7 +71,8 @@ public class WorkflowStateController
                 {
                     ParamId = outputDef.Id,
                     Label = outputDef.Id,
-                    ParamType = outputDef.Type
+                    ParamType = outputDef.Type,
+                    Format = outputDef.Format
                 };
                 state.Outputs.Add(paramState);
             }

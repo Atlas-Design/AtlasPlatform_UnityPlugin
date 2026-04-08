@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="library-row">
+        <ui:VisualElement name="library-active-dot" class="library-active-dot" />
+        <ui:DropdownField name="library-dropdown" class="library-dropdown" />
+        <ui:Button name="load-file-button" text="Import" class="library-import-btn" tooltip="Import workflow from JSON file" />
+        <ui:Button name="delete-workflow-button" text="✕" class="library-delete-btn" tooltip="Delete selected workflow" />
+    </ui:VisualElement>
+</ui:UXML>

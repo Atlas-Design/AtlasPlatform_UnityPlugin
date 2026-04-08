@@ -12,6 +12,12 @@
             </ui:VisualElement>
             <ui:Label name="status-label" text="Ready" class="status-label" />
         </ui:VisualElement>
+        <ui:VisualElement name="job-error-row" class="job-error-row" style="flex-shrink: 0; display: none;">
+            <ui:Label name="job-error-label" class="job-error-label" text="" />
+        </ui:VisualElement>
+        <ui:VisualElement name="job-retry-row" class="job-retry-row" style="flex-shrink: 0; display: none;">
+            <ui:Button name="job-retry-button" text="Retry with same inputs" class="job-retry-button" />
+        </ui:VisualElement>
         <ui:ScrollView name="job-content-scroll" style="flex-grow: 1;">
             <ui:Foldout name="inputs-foldout" text="Inputs" class="io-foldout">
                 <ui:VisualElement name="inputs-container" class="io-foldout-content" />

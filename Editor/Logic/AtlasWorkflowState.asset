@@ -12,72 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
   m_Name: AtlasWorkflowState
   m_EditorClassIdentifier: 
-  ActiveApiId: a5f22a08-7d3d-47a0-a48f-07e3763582af
-  ActiveName: Test_API_NoUploads
-  BaseUrl: https://api.dev.atlas.design
+  ActiveApiId: 74ff4c21-0c57-49e4-93df-a4a6a3b8df96
+  ActiveName: INT-AudioTest-API-v000
+  BaseUrl: https://api.prod.atlas.design
   Version: 0.1
   Inputs:
-  - ParamId: input_boolean
-    Label: input_boolean
-    ParamType: 0
-    SourceType: 0
-    BoolValue: 1
-    NumberValue: 0
-    StringValue: 
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
-  - ParamId: input_number
-    Label: input_number
-    ParamType: 1
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 1
-    StringValue: 
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
   - ParamId: input_text
     Label: input_text
     ParamType: 2
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
-    StringValue: images
+    StringValue: And this is a different one
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
     FilePath: 
+    Format: 
   Outputs:
-  - ParamId: output_boolean
-    Label: output_boolean
-    ParamType: 0
+  - ParamId: output_audio
+    Label: output_audio
+    ParamType: 5
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: 
-  - ParamId: output_text
-    Label: output_text
-    ParamType: 2
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 0
-    StringValue: 
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
-  - ParamId: output_number
-    Label: output_number
-    ParamType: 1
-    SourceType: 0
-    BoolValue: 0
-    NumberValue: 0
-    StringValue: 
-    ImageValue: {fileID: 0}
-    MeshValue: {fileID: 0}
-    FilePath: 
+    FilePath: C:\Users\atlas\AppData\Local\Temp\UnityAtlasWorkflow\output_audio_bc07aa0a-5ad4-4c0e-a0a2-c160ae8cab4d.mp3
+    Format: mp3
   IsJobRunning: 0
   JobStatus: 
   JobProgress: 0

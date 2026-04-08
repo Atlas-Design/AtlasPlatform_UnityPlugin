@@ -14,9 +14,25 @@ public static class WorkflowManager
     private const string JobFileName = "job.json";
 
     /// <summary>
+    /// Jobs still marked Running longer than this are treated as stale on load (crash/force-quit/no save).
+    /// </summary>
+    public const int StaleRunningJobMaxHours = 48;
+
+    /// <summary>
     /// Runtime cache of all loaded job states.
     /// </summary>
     public static readonly List<AtlasWorkflowJobState> Jobs = new List<AtlasWorkflowJobState>();
+
+    /// <summary>
+    /// Raised after the in-memory jobs list or job status changes in a way UI should refresh (history, Running Jobs).
+    /// Handlers should marshal to the main thread (e.g. <see cref="UnityEditor.EditorApplication.delayCall"/>).
+    /// </summary>
+    public static event Action JobsMutated;
+
+    public static void NotifyJobsMutated()
+    {
+        JobsMutated?.Invoke();
+    }
 
     #endregion
 
@@ -126,22 +142,29 @@ public static class WorkflowManager
 
         AtlasLogger.LogJob($"Created job {job.JobId} for workflow '{job.WorkflowName}'");
 
+        NotifyJobsMutated();
+
         return job;
     }
 
     /// <summary>
     /// Marks a running job as Succeeded, sets progress to 100%, and saves to disk.
     /// </summary>
-    public static void MarkJobSucceeded(AtlasWorkflowJobState job)
+    /// <param name="notifyUser">If false, skips the completion dialog even when settings ask for it (e.g. batch runs).</param>
+    public static void MarkJobSucceeded(AtlasWorkflowJobState job, bool notifyUser = true)
     {
         job.Status = JobStatus.Succeeded;
         job.ExecutionStatus = ExecutionStatus.Completed;
         job.CompletedAtUtc = DateTime.UtcNow;
         job.Progress01 = 1f;
         SaveJobToDisk(job);
-        
-        // Show notification if enabled
-        NotifyJobComplete(job, true);
+
+        SettingsManager.CheckTempStorageLimit();
+
+        if (notifyUser)
+            NotifyJobComplete(job, true);
+
+        NotifyJobsMutated();
     }
 
     /// <summary>
@@ -149,7 +172,7 @@ public static class WorkflowManager
     /// Note: Enhanced error details (ErrorNodeName, etc.) should be set on the job 
     /// before calling this method if available from the API.
     /// </summary>
-    public static void MarkJobFailed(AtlasWorkflowJobState job, string errorMessage)
+    public static void MarkJobFailed(AtlasWorkflowJobState job, string errorMessage, bool notifyUser = true)
     {
         job.Status = JobStatus.Failed;
         job.ExecutionStatus = ExecutionStatus.Failed;
@@ -157,9 +180,14 @@ public static class WorkflowManager
         job.ErrorMessage = errorMessage;
         job.Progress01 = 1f;
         SaveJobToDisk(job);
-        
-        // Show notification if enabled
-        NotifyJobComplete(job, false);
+
+        if (notifyUser)
+        {
+            SettingsManager.CheckTempStorageLimit();
+            NotifyJobComplete(job, false);
+        }
+
+        NotifyJobsMutated();
     }
 
     /// <summary>
@@ -167,9 +195,6 @@ public static class WorkflowManager
     /// </summary>
     private static void NotifyJobComplete(AtlasWorkflowJobState job, bool succeeded)
     {
-        // Check temp storage limit (this creates a warning in console if exceeded)
-        SettingsManager.CheckTempStorageLimit();
-        
         if (!SettingsManager.GetNotifyOnJobComplete())
             return;
 
@@ -241,7 +266,8 @@ public static class WorkflowManager
                     ImageValue = src.ImageValue,
                     MeshValue = src.MeshValue,
 
-                    FilePath = src.FilePath
+                    FilePath = src.FilePath,
+                    Format = src.Format
                 };
                 clone.Inputs.Add(p);
             }
@@ -267,7 +293,8 @@ public static class WorkflowManager
                     ImageValue = src.ImageValue,
                     MeshValue = src.MeshValue,
 
-                    FilePath = src.FilePath
+                    FilePath = src.FilePath,
+                    Format = src.Format
                 };
                 clone.Outputs.Add(p);
             }
@@ -279,6 +306,69 @@ public static class WorkflowManager
     #endregion
 
     #region State & Data Mapping
+
+    /// <summary>
+    /// Copies saved input values from a job snapshot onto a loaded workflow state (matched by ParamId).
+    /// Used when re-running a job from history.
+    /// </summary>
+    public static void ApplyInputsSnapshotToState(AtlasWorkflowState state, IList<AtlasWorkflowParamState> snapshot)
+    {
+        if (state?.Inputs == null || snapshot == null)
+            return;
+
+        Dictionary<string, AtlasWorkflowParamState> byId = new Dictionary<string, AtlasWorkflowParamState>();
+        foreach (var p in snapshot)
+        {
+            if (p != null && !string.IsNullOrEmpty(p.ParamId) && !byId.ContainsKey(p.ParamId))
+                byId[p.ParamId] = p;
+        }
+
+        foreach (var input in state.Inputs)
+        {
+            if (input == null || string.IsNullOrEmpty(input.ParamId))
+                continue;
+            if (!byId.TryGetValue(input.ParamId, out var snap) || snap == null)
+                continue;
+
+            input.BoolValue = snap.BoolValue;
+            input.NumberValue = snap.NumberValue;
+            input.StringValue = snap.StringValue ?? "";
+            input.FilePath = snap.FilePath;
+            input.SourceType = snap.SourceType;
+            input.ImageValue = null;
+            input.MeshValue = null;
+        }
+    }
+
+    /// <summary>
+    /// Finds a workflow library JSON whose <c>api_id</c> matches <paramref name="workflowApiId"/> (job <see cref="AtlasWorkflowJobState.WorkflowId"/>).
+    /// </summary>
+    public static bool TryFindLibraryWorkflowPathForApiId(string workflowApiId, out string libraryFilePath)
+    {
+        libraryFilePath = null;
+        if (string.IsNullOrEmpty(workflowApiId))
+            return false;
+
+        foreach (string file in GetSavedWorkflows())
+        {
+            try
+            {
+                string json = File.ReadAllText(file);
+                var wf = WorkflowDefinition.FromJson(json);
+                if (wf != null && wf.ApiId == workflowApiId)
+                {
+                    libraryFilePath = file;
+                    return true;
+                }
+            }
+            catch
+            {
+                // skip invalid files
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Snapshots the outputs from the active Workflow State into the Job object and saves the job.
@@ -321,14 +411,28 @@ public static class WorkflowManager
     /// Serializes a specific Job object to its dedicated JSON file on disk.
     /// Handles directory creation if missing.
     /// </summary>
-    public static void SaveJobToDisk(AtlasWorkflowJobState job)
+    /// <returns>True if the job file was written successfully.</returns>
+    public static bool SaveJobToDisk(AtlasWorkflowJobState job)
     {
+        if (job == null)
+        {
+            AtlasLogger.LogError("SaveJobToDisk: job is null.");
+            return false;
+        }
+
+        // Opening Atlas Job History calls LoadJobsFromDisk(), which clears Jobs and reloads new instances.
+        // The async workflow run still holds the original object reference, so completion would otherwise
+        // update a "detached" job (dialog + disk OK) while WorkflowManager.Jobs still shows Running.
+        SyncJobInListFromLiveInstance(job);
+
         try
         {
             if (string.IsNullOrEmpty(job.JobFolderPath))
             {
                 job.JobFolderPath = GetJobFolderPath(job);
             }
+
+            job.JobFolderPath = Path.GetFullPath(job.JobFolderPath);
 
             if (!Directory.Exists(job.JobFolderPath))
                 Directory.CreateDirectory(job.JobFolderPath);
@@ -339,18 +443,67 @@ public static class WorkflowManager
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 PreserveReferencesHandling = PreserveReferencesHandling.None,
-                TypeNameHandling = TypeNameHandling.None
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore
             };
 
             var json = JsonConvert.SerializeObject(job, Formatting.Indented, settings);
             File.WriteAllText(jobFilePath, json);
-            
+
             AtlasLogger.LogJob($"Saved job {job.JobId} to: {jobFilePath}");
+            return true;
         }
         catch (System.Exception ex)
         {
-            AtlasLogger.LogException(ex, $"Failed to save job {job.JobId}");
+            AtlasLogger.LogException(ex,
+                $"Failed to save job {job.JobId}. Check folder permissions and that JobFolderPath matches the job.json location.");
+            return false;
         }
+    }
+
+    /// <summary>
+    /// If <paramref name="live"/> is not the same instance as the job with the same JobId in <see cref="Jobs"/>,
+    /// copies runtime fields onto the listed instance so UI and history keep stable references.
+    /// </summary>
+    private static void SyncJobInListFromLiveInstance(AtlasWorkflowJobState live)
+    {
+        if (live == null || string.IsNullOrEmpty(live.JobId))
+            return;
+
+        foreach (var listed in Jobs)
+        {
+            if (listed == null || listed.JobId != live.JobId)
+                continue;
+
+            if (ReferenceEquals(listed, live))
+                return;
+
+            CopyRuntimeJobFields(live, listed);
+            return;
+        }
+    }
+
+    private static void CopyRuntimeJobFields(AtlasWorkflowJobState from, AtlasWorkflowJobState to)
+    {
+        to.WorkflowId = from.WorkflowId;
+        to.WorkflowName = from.WorkflowName;
+        to.WorkflowVersion = from.WorkflowVersion;
+        to.BatchId = from.BatchId;
+        to.BatchIndex = from.BatchIndex;
+        to.BatchName = from.BatchName;
+        to.RetryOfJobId = from.RetryOfJobId;
+        to.CompletedAtUtc = from.CompletedAtUtc;
+        to.Status = from.Status;
+        to.ExecutionStatus = from.ExecutionStatus;
+        to.ExecutionId = from.ExecutionId;
+        to.ErrorMessage = from.ErrorMessage;
+        to.ErrorNodeName = from.ErrorNodeName;
+        to.ErrorNodeType = from.ErrorNodeType;
+        to.ErrorNodeId = from.ErrorNodeId;
+        to.Progress01 = from.Progress01;
+        to.InputsSnapshot = from.InputsSnapshot;
+        to.OutputsSnapshot = from.OutputsSnapshot;
+        to.JobFolderPath = from.JobFolderPath;
     }
 
     /// <summary>
@@ -375,9 +528,11 @@ public static class WorkflowManager
 
                     if (job != null)
                     {
-                        // Ensure JobFolderPath is set (in case older files didn't have it)
-                        if (string.IsNullOrEmpty(job.JobFolderPath))
-                            job.JobFolderPath = Path.GetDirectoryName(jobFilePath);
+                        // Always derive folder from where job.json was found. Serialized JobFolderPath can be
+                        // wrong (other machine, moved project, renamed parent) and breaks SaveJobToDisk.
+                        string folder = Path.GetDirectoryName(jobFilePath);
+                        if (!string.IsNullOrEmpty(folder))
+                            job.JobFolderPath = Path.GetFullPath(folder);
 
                         Jobs.Add(job);
                     }
@@ -389,11 +544,62 @@ public static class WorkflowManager
             }
 
             AtlasLogger.LogJob($"Loaded {Jobs.Count} job(s) from disk.");
+
+            ReconcileStaleRunningJobs();
         }
         catch (System.Exception ex)
         {
             AtlasLogger.LogException(ex, "Failed to load jobs");
         }
+        finally
+        {
+            NotifyJobsMutated();
+        }
+    }
+
+    /// <summary>
+    /// Marks Running jobs as failed if they are older than <see cref="StaleRunningJobMaxHours"/> (no completion was saved).
+    /// </summary>
+    public static int ReconcileStaleRunningJobs()
+    {
+        int n = 0;
+        var cutoff = TimeSpan.FromHours(StaleRunningJobMaxHours);
+        foreach (var job in Jobs)
+        {
+            if (job == null || job.Status != JobStatus.Running)
+                continue;
+            if (DateTime.UtcNow - job.CreatedAtUtc <= cutoff)
+                continue;
+
+            var prevExecution = job.ExecutionStatus;
+            var prevProgress = job.Progress01;
+            var prevCompleted = job.CompletedAtUtc;
+
+            job.Status = JobStatus.Failed;
+            job.ExecutionStatus = ExecutionStatus.Failed;
+            job.CompletedAtUtc = DateTime.UtcNow;
+            job.ErrorMessage =
+                $"Stale job: still marked Running after {StaleRunningJobMaxHours}+ hours (editor may have closed before completion).";
+            job.Progress01 = 1f;
+
+            if (SaveJobToDisk(job))
+                n++;
+            else
+            {
+                job.Status = JobStatus.Running;
+                job.ExecutionStatus = prevExecution;
+                job.CompletedAtUtc = prevCompleted;
+                job.ErrorMessage = null;
+                job.Progress01 = prevProgress;
+                AtlasLogger.LogError(
+                    $"Stale job {job.JobId} could not be updated on disk (see save error above). Fix permissions or delete the job folder under AtlasWorkflowJobs.");
+            }
+        }
+
+        if (n > 0)
+            AtlasLogger.LogWarning($"Marked {n} stale workflow job(s) as failed. Use Stop on Running Jobs or complete runs normally to avoid orphaned Running state.");
+
+        return n;
     }
 
     #endregion
@@ -421,8 +627,9 @@ public static class WorkflowManager
             ImageValue = null,
             MeshValue = null,
 
-            // For image/mesh, this is what we actually care about in history:
-            FilePath = source.FilePath
+            // For image/mesh/audio, this is what we actually care about in history:
+            FilePath = source.FilePath,
+            Format = source.Format
         };
     }
 
@@ -499,7 +706,9 @@ public static class WorkflowManager
             if (removed)
             {
                 AtlasLogger.LogJob($"Deleted job {job.JobId}");
+                NotifyJobsMutated();
             }
+
             return removed;
         }
         catch (System.Exception ex)

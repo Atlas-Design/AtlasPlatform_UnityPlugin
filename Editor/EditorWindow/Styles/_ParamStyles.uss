@@ -27,6 +27,7 @@
 .type-color-string { background-color: #5294E2; } /* Blue */
 .type-color-image { background-color: #E6DB74; } /* Yellow */
 .type-color-mesh { background-color: #AE81FF; } /* Purple */
+.type-color-audio { background-color: #2ECC71; } /* Green */
 
 .clickable-output-image { cursor: link; }
 
@@ -161,9 +162,7 @@
 
 .output-preview-row {
     justify-content: flex-start;
-}
-
-.output-preview-status {
+}.output-preview-status {
     margin-left: auto;
     font-size: 10px;
     color: rgb(120, 120, 120);

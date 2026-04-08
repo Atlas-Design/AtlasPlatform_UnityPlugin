@@ -11,6 +11,7 @@
             <ui:Label text="Running" name="Status" class="running-job-status" />
             <ui:ProgressBar value="0" name="Progress" class="running-job-progress" />
             <ui:Label text="(00:00)" name="TotalTime" class="running-job-elapsed" />
+            <ui:Button text="Stop" name="StopJob" class="running-job-stop" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

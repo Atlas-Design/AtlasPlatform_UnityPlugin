@@ -28,6 +28,9 @@ public class AtlasWorkflowParamState
 
     // For referencing external files on disk
     public string FilePath;
+
+    /// <summary>API output <c>format</c> from workflow JSON (e.g. <c>mp3</c> for <c>audio</c> outputs). Null if unspecified.</summary>
+    public string Format;
 }
 
 // This is our main state manager. It inherits from ScriptableObject, making it a data asset.

@@ -4,40 +4,25 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.IO;
-using System.Linq;
-using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 public class AtlasWorkflowEditor : EditorWindow
 {
-    // --- Controllers and State ---
     private WorkflowStateController stateController;
     private WorkflowUIBuilder uiBuilder;
-    private JobHistoryView historyView; // NEW
 
     private AtlasWorkflowState state;
-    private AtlasWorkflowJobState selectedJob;
 
-
-    // --- UI Element References ---
-    private Button loadFileButton;
-    private Button deleteWorkflowButton;
-    private DropdownField libraryDropdown;
-    private VisualElement libraryActiveDot;
+    private WorkflowLibraryPicker libraryPicker;
     private VisualElement jobViewContainer;
     private Button runWorkflowButton;
-    private ScrollView jobsList;
+    private Button openWorkflowJobsButton;
     private WorkflowJobView jobView;
-    private Button jobsMenuBtn;
 
-    private VisualElement runningJobsPanel;
-    private ScrollView runningJobsList;
-    private RunningJobsView runningJobsView;
+    private CancellationTokenSource _activeRunCts;
 
-    // A reference to our custom UI component instance
-
-
-    [MenuItem("Atlas/Workflow Editor")]
+    [MenuItem("Atlas/Atlas Workflow", false, 0)]
     public static void ShowWindow() { GetWindow<AtlasWorkflowEditor>("Atlas Workflow"); }
 
     #region Lifecycle & Initialization
@@ -49,15 +34,15 @@ public class AtlasWorkflowEditor : EditorWindow
         if (visualTree == null) return;
         visualTree.CloneTree(root);
 
+        // Docked/tabbed EditorWindows need an explicit flex cap so nested ScrollViews can scroll.
+        root.style.flexGrow = 1;
+        root.style.minHeight = 0;
+        root.style.flexDirection = FlexDirection.Column;
+
         state = LoadAsset<AtlasWorkflowState>("AtlasWorkflowState");
         if (state == null) { root.Add(new Label("Critical Error: AtlasWorkflowState asset not found.")); return; }
 
-        // --- Cleanup old temp files on editor window open ---
         AssetExporter.CleanupTempFiles();
-
-
-
-
 
         var paramStyles = AssetDatabase.LoadAssetAtPath<StyleSheet>(
             "Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss");
@@ -67,73 +52,84 @@ public class AtlasWorkflowEditor : EditorWindow
         stateController = new WorkflowStateController(state);
         uiBuilder = new WorkflowUIBuilder(state);
 
-        QueryUIElements(root);
-        historyView = new JobHistoryView(jobsList, uiBuilder.Renderer, SelectJob);
-
-        if (runningJobsPanel != null && runningJobsList != null)
+        var pickerHost = root.Q<VisualElement>("workflow-library-picker-host");
+        if (pickerHost != null)
         {
-            runningJobsView = new RunningJobsView(runningJobsPanel, runningJobsList);
+            libraryPicker = new WorkflowLibraryPicker();
+            pickerHost.Add(libraryPicker);
         }
 
+        QueryUIElements(root);
+        EnforceWorkflowFooterLayout();
         RegisterCallbacks();
 
+        WorkflowEditorRunSession.JobSelectedForStatus += OnJobSelectedForStatus;
+
         WorkflowManager.LoadJobsFromDisk();
-        historyView.Refresh(WorkflowManager.Jobs);
-        if (runningJobsView != null)
-            runningJobsView.Refresh(WorkflowManager.Jobs);
 
-
-        // --- Create and add our custom component ---
         jobView = new WorkflowJobView();
         jobViewContainer.Add(jobView);
 
-        PopulateLibraryDropdown();
+        libraryPicker?.RefreshDropdownChoices();
         UpdateUIBasedOnState();
     }
 
     private void QueryUIElements(VisualElement root)
     {
-        loadFileButton = root.Q<Button>("load-file-button");
-        deleteWorkflowButton = root.Q<Button>("delete-workflow-button");
-        libraryDropdown = root.Q<DropdownField>("library-dropdown");
-        libraryActiveDot = root.Q<VisualElement>("library-active-dot");
         jobViewContainer = root.Q<VisualElement>("job-view-container");
         runWorkflowButton = root.Q<Button>("run-workflow-button");
+        openWorkflowJobsButton = root.Q<Button>("open-workflow-jobs-button");
+    }
 
-        runningJobsPanel = root.Q<VisualElement>("running-jobs-panel");
-        runningJobsList = root.Q<ScrollView>("running-jobs-list");
+    /// <summary>
+    /// Ensures footer order/labels even if an older cached UXML or theme is in play; close and reopen the window after package updates.
+    /// </summary>
+    private void EnforceWorkflowFooterLayout()
+    {
+        if (openWorkflowJobsButton == null || runWorkflowButton == null)
+            return;
 
-        jobsList = root.Q<ScrollView>("jobs-list");
-        jobsMenuBtn = root.Q<Button>("jobs-menu-btn");
+        var row = openWorkflowJobsButton.parent;
+        var spacer = row?.Q<VisualElement>(className: "workflow-actions-spacer");
+        if (row == null || spacer == null)
+            return;
+
+        openWorkflowJobsButton.RemoveFromHierarchy();
+        spacer.RemoveFromHierarchy();
+        runWorkflowButton.RemoveFromHierarchy();
+        row.Add(openWorkflowJobsButton);
+        row.Add(spacer);
+        row.Add(runWorkflowButton);
+
+        openWorkflowJobsButton.text = "Open Job History";
+        openWorkflowJobsButton.tooltip = "Open Atlas Job History (running jobs and past runs)";
+        openWorkflowJobsButton.AddToClassList("open-workflow-jobs-button");
     }
 
     private void RegisterCallbacks()
     {
-        loadFileButton.clicked += OnLoadFromFileClicked;
-        libraryDropdown.RegisterValueChangedCallback(OnLibrarySelectionChanged);
-        runWorkflowButton.clicked += OnRunWorkflowClicked;
+        if (libraryPicker?.ImportButton != null)
+            libraryPicker.ImportButton.clicked += OnLoadFromFileClicked;
+        if (libraryPicker?.Dropdown != null)
+            libraryPicker.Dropdown.RegisterValueChangedCallback(OnLibrarySelectionChanged);
+        if (runWorkflowButton != null)
+            runWorkflowButton.clicked += OnRunWorkflowClicked;
 
-        // Delete workflow button
-        if (deleteWorkflowButton != null)
-        {
-            deleteWorkflowButton.clicked += OnDeleteWorkflowClicked;
-        }
+        if (libraryPicker?.DeleteButton != null)
+            libraryPicker.DeleteButton.clicked += OnDeleteWorkflowClicked;
 
-        // Jobs History menu button
-        if (jobsMenuBtn != null)
-        {
-            jobsMenuBtn.clicked += OnJobsMenuClicked;
-        }
+        if (openWorkflowJobsButton != null)
+            openWorkflowJobsButton.clicked += OnOpenWorkflowJobsClicked;
     }
 
-    private void OnJobsMenuClicked()
+    private void OnOpenWorkflowJobsClicked()
     {
-        var menu = new GenericMenu();
-        menu.AddItem(new GUIContent("Clear History"), false, () =>
-        {
-            historyView?.ClearHistory();
-        });
-        menu.ShowAsContext();
+        AtlasWorkflowJobsWindow.ShowWindow();
+    }
+
+    private void OnDestroy()
+    {
+        WorkflowEditorRunSession.JobSelectedForStatus -= OnJobSelectedForStatus;
     }
 
     #endregion
@@ -149,19 +145,18 @@ public class AtlasWorkflowEditor : EditorWindow
 
         stateController.LoadWorkflowFromFile(savedPath);
 
-        PopulateLibraryDropdown();
-        libraryDropdown.SetValueWithoutNotify(Path.GetFileName(savedPath));
+        libraryPicker?.RefreshDropdownChoices();
+        libraryPicker?.Dropdown?.SetValueWithoutNotify(Path.GetFileName(savedPath));
         UpdateUIBasedOnState();
     }
 
     private void OnLibrarySelectionChanged(ChangeEvent<string> evt)
     {
-        // Ignore placeholder text or empty values
-        if (string.IsNullOrEmpty(evt.newValue) || 
-            evt.newValue == "Select a workflow..." || 
+        if (string.IsNullOrEmpty(evt.newValue) ||
+            evt.newValue == "Select a workflow..." ||
             evt.newValue == "No workflows - click Import")
             return;
-            
+
         string filePath = Path.Combine(WorkflowManager.GetLibraryDirectory(), evt.newValue);
         stateController.LoadWorkflowFromFile(filePath);
         UpdateUIBasedOnState();
@@ -169,40 +164,34 @@ public class AtlasWorkflowEditor : EditorWindow
 
     private void OnDeleteWorkflowClicked()
     {
-        string selectedWorkflow = libraryDropdown.value;
-        
-        // Check if a valid workflow is selected
-        if (string.IsNullOrEmpty(selectedWorkflow) || 
-            selectedWorkflow == "Select a workflow..." || 
+        string selectedWorkflow = libraryPicker?.Dropdown?.value;
+
+        if (string.IsNullOrEmpty(selectedWorkflow) ||
+            selectedWorkflow == "Select a workflow..." ||
             selectedWorkflow == "No workflows - click Import")
         {
             EditorUtility.DisplayDialog("No Workflow Selected", "Please select a workflow to delete.", "OK");
             return;
         }
 
-        // Confirm deletion
         bool confirm = EditorUtility.DisplayDialog(
             "Delete Workflow",
             $"Are you sure you want to delete '{selectedWorkflow}'?\n\nThis action cannot be undone.",
             "Delete",
-            "Cancel"
-        );
+            "Cancel");
 
         if (!confirm)
             return;
 
-        // Delete the workflow
         bool deleted = WorkflowManager.DeleteWorkflowFromLibrary(selectedWorkflow);
-        
+
         if (deleted)
         {
-            // Clear the current state if we deleted the active workflow
             stateController.ClearState();
-            
-            // Refresh the dropdown
-            PopulateLibraryDropdown();
+
+            libraryPicker?.RefreshDropdownChoices();
             UpdateUIBasedOnState();
-            
+
             Debug.Log($"[Atlas] Deleted workflow: {selectedWorkflow}");
         }
         else
@@ -219,65 +208,51 @@ public class AtlasWorkflowEditor : EditorWindow
     {
         var statusLabel = jobView.Q<Label>("status-label");
 
-        // 1) Per-job clone of the current state (isolated Inputs/Outputs)
         var jobState = WorkflowManager.CloneStateForJobRun(state);
-
-        // 2) Create the job from the per-job state (snapshots from jobState)
         var job = WorkflowManager.CreateJobFromState(jobState);
 
-        // Show "Running" immediately in both panels
-        historyView.Refresh(WorkflowManager.Jobs);
-        if (runningJobsView != null)
-            runningJobsView.Refresh(WorkflowManager.Jobs);
+        _activeRunCts = new CancellationTokenSource();
+        WorkflowEditorRunSession.BeginActiveRun(job, _activeRunCts);
 
         try
         {
             statusLabel.text = "Running...";
 
-            // 3) Prepare inputs inside this job folder (mutates jobState.Inputs[].FilePath)
-            var inputFilesForUpload = await PrepareInputFilesForJob(job, jobState);
+            var inputFilesForUpload = await WorkflowJobRunHelper.PrepareInputFilesForJobAsync(job, jobState);
 
-            // 4) Run workflow using the new async polling API
             var outputResults = await AtlasAPIController.RunWorkflowWithPollingAsync(
-                jobState, 
-                job,                    // Pass job to update ExecutionId/Status during polling
-                inputFilesForUpload);
+                jobState,
+                job,
+                inputFilesForUpload,
+                cancellationToken: _activeRunCts.Token);
 
             if (outputResults != null)
             {
-                // --- JOB-LOCAL STATE (for history + job folder) -------------------
+                WorkflowJobRunHelper.MapOutputResultsToState(jobState, outputResults);
+                WorkflowJobRunHelper.CopyOutputFilesToJobFolder(job, jobState);
 
-                // Map results into jobState
-                MapOutputResultsToState(jobState, outputResults);
-
-                // Copy generated outputs into the job folder and fix FilePath in jobState
-                CopyOutputFilesToJobFolder(job, jobState);
-
-                // Snapshot jobState into the job record -> job.json uses this
                 WorkflowManager.UpdateJobInputsFromState(job, jobState);
                 WorkflowManager.UpdateJobOutputsFromState(job, jobState);
                 WorkflowManager.MarkJobSucceeded(job);
 
-                // --- SHARED EDITOR STATE (for current workflow UI) ----------------
-                MapOutputResultsToState(state, outputResults);
+                WorkflowJobRunHelper.MapOutputResultsToState(state, outputResults);
                 EditorUtility.SetDirty(state);
 
                 statusLabel.text = "Complete";
 
-                // Refresh History + Running Jobs (job disappears from running)
-                historyView.Refresh(WorkflowManager.Jobs);
-                if (runningJobsView != null)
-                    runningJobsView.Refresh(WorkflowManager.Jobs);
-
-                SelectJob(job);
+                WorkflowEditorRunSession.NotifyJobSelected(job);
             }
             else
             {
-                statusLabel.text = "Failed";
-                WorkflowManager.MarkJobFailed(job, "Workflow execution returned null (check logs for details).");
-                historyView.Refresh(WorkflowManager.Jobs);
-                if (runningJobsView != null)
-                    runningJobsView.Refresh(WorkflowManager.Jobs);
+                if (job.Status == JobStatus.Cancelled)
+                {
+                    statusLabel.text = "Cancelled";
+                }
+                else
+                {
+                    statusLabel.text = "Failed";
+                    WorkflowManager.MarkJobFailed(job, "Workflow execution returned null (check logs for details).");
+                }
             }
         }
         catch (System.Exception ex)
@@ -285,184 +260,16 @@ public class AtlasWorkflowEditor : EditorWindow
             statusLabel.text = "Error";
             WorkflowManager.MarkJobFailed(job, ex.Message);
 
-            historyView.Refresh(WorkflowManager.Jobs);
-            if (runningJobsView != null)
-                runningJobsView.Refresh(WorkflowManager.Jobs);
-
             AtlasLogger.LogException(ex, "Workflow execution failed");
         }
         finally
         {
-            // --- Memory cleanup: Destroy the cloned ScriptableObject to prevent memory leaks ---
+            _activeRunCts?.Dispose();
+            _activeRunCts = null;
+            WorkflowEditorRunSession.EndActiveRun();
+
             if (jobState != null)
-            {
                 DestroyImmediate(jobState);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Copies generated files (images/meshes) from their temp location to the permanent job history folder.
-    /// </summary>
-    private void CopyOutputFilesToJobFolder(AtlasWorkflowJobState job, AtlasWorkflowState state)
-    {
-        if (state.Outputs == null || string.IsNullOrEmpty(job.JobFolderPath)) return;
-
-        try
-        {
-            var outputsFolder = Path.Combine(job.JobFolderPath, "outputs");
-            if (!Directory.Exists(outputsFolder))
-                Directory.CreateDirectory(outputsFolder);
-
-            foreach (var outputState in state.Outputs)
-            {
-                if (outputState.ParamType != ParamType.image &&
-                    outputState.ParamType != ParamType.mesh)
-                    continue;
-
-                if (string.IsNullOrEmpty(outputState.FilePath) ||
-                    !File.Exists(outputState.FilePath))
-                    continue;
-
-                var ext = Path.GetExtension(outputState.FilePath);
-                var safeParamId = string.IsNullOrEmpty(outputState.ParamId)
-                    ? "Output"
-                    : outputState.ParamId;
-
-                foreach (var c in Path.GetInvalidFileNameChars())
-                    safeParamId = safeParamId.Replace(c, '_');
-
-                var fileName = $"Output_{safeParamId}{ext}";
-                var destPath = Path.Combine(outputsFolder, fileName);
-
-                File.Copy(outputState.FilePath, destPath, true);
-                outputState.FilePath = destPath;
-            }
-        }
-        catch (System.Exception ex)
-        {
-            AtlasLogger.LogException(ex, "Failed to copy output files to job folder");
-        }
-    }
-
-    /// <summary>
-    /// Ensures all asset inputs (image/mesh) are copied into this job's folder
-    /// as "Input_*" files and returns a map ParamId -> file path to upload.
-    /// </summary>
-    private async Task<Dictionary<string, string>> PrepareInputFilesForJob(
-        AtlasWorkflowJobState job,
-        AtlasWorkflowState state)
-    {
-        var result = new Dictionary<string, string>();
-
-        if (state.Inputs == null || string.IsNullOrEmpty(job.JobFolderPath))
-            return result;
-
-        try
-        {
-            var inputsFolder = Path.Combine(job.JobFolderPath, "inputs");
-            if (!Directory.Exists(inputsFolder))
-                Directory.CreateDirectory(inputsFolder);
-
-            foreach (var input in state.Inputs)
-            {
-                if (input.ParamType != ParamType.image && input.ParamType != ParamType.mesh)
-                    continue;
-
-                string sourcePath = null;
-
-                // 1) If input comes from a direct file path, use that first
-                if (input.SourceType == InputSourceType.FilePath &&
-                    !string.IsNullOrEmpty(input.FilePath) &&
-                    File.Exists(input.FilePath))
-                {
-                    sourcePath = input.FilePath;
-                }
-
-                // 2) If input is a project asset, export it to a temp file
-                if (sourcePath == null && input.SourceType == InputSourceType.Project)
-                {
-                    if (input.ParamType == ParamType.image && input.ImageValue != null)
-                    {
-                        sourcePath = await AssetExporter.ExportTextureAsPng(input.ImageValue);
-                    }
-                    else if (input.ParamType == ParamType.mesh && input.MeshValue != null)
-                    {
-                        sourcePath = await AssetExporter.ExportGameObjectAsGlb(input.MeshValue);
-                    }
-                }
-
-                if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
-                    continue;
-
-                var ext = Path.GetExtension(sourcePath);
-                var safeParamId = string.IsNullOrEmpty(input.ParamId) ? "Param" : input.ParamId;
-
-                foreach (var c in Path.GetInvalidFileNameChars())
-                    safeParamId = safeParamId.Replace(c, '_');
-
-                var destName = $"Input_{safeParamId}{ext}";
-                var destPath = Path.Combine(inputsFolder, destName);
-
-                File.Copy(sourcePath, destPath, true);
-
-                // This is now the canonical file path for this run
-                input.FilePath = destPath;
-                result[input.ParamId] = destPath;
-            }
-        }
-        catch (System.Exception ex)
-        {
-            AtlasLogger.LogException(ex, "Failed to prepare input files for job");
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Applies the raw output dictionary returned from the API back into the Workflow State.
-    /// For asset outputs, this sets FilePath to the local path returned by the API controller.
-    /// </summary>
-    private void MapOutputResultsToState(
-        AtlasWorkflowState state,
-        Dictionary<string, object> outputResults)
-    {
-        if (state.Outputs == null || outputResults == null)
-            return;
-
-        foreach (var outputState in state.Outputs)
-        {
-            if (!outputResults.TryGetValue(outputState.ParamId, out var value) || value == null)
-                continue;
-
-            try
-            {
-                switch (outputState.ParamType)
-                {
-                    case ParamType.boolean:
-                        outputState.BoolValue = System.Convert.ToBoolean(value);
-                        break;
-
-                    case ParamType.number:
-                        outputState.NumberValue = System.Convert.ToSingle(value);
-                        break;
-
-                    case ParamType.@string:
-                        outputState.StringValue = value.ToString();
-                        break;
-
-                    case ParamType.image:
-                    case ParamType.mesh:
-                        var path = value.ToString();
-                        if (!string.IsNullOrEmpty(path))
-                            outputState.FilePath = path;
-                        break;
-                }
-            }
-            catch (System.Exception ex)
-            {
-                AtlasLogger.LogException(ex, $"Failed to map output '{outputState.ParamId}'");
-            }
         }
     }
 
@@ -470,9 +277,6 @@ public class AtlasWorkflowEditor : EditorWindow
 
     #region UI State Management
 
-    /// <summary>
-    /// Updates the main view visibility and content based on whether a workflow is currently loaded.
-    /// </summary>
     private void UpdateUIBasedOnState()
     {
         bool isWorkflowLoaded = !string.IsNullOrEmpty(state.ActiveName);
@@ -486,28 +290,9 @@ public class AtlasWorkflowEditor : EditorWindow
             }
         }
 
-        // Update library active dot
-        if (libraryActiveDot != null)
-            libraryActiveDot.EnableInClassList("inactive", !isWorkflowLoaded);
-
-        // Update delete button - only enabled when a workflow is selected
-        if (deleteWorkflowButton != null)
-        {
-            deleteWorkflowButton.SetEnabled(isWorkflowLoaded);
-        }
-
-        // Update dropdown placeholder when no workflow loaded
-        if (!isWorkflowLoaded)
-        {
-            var workflows = WorkflowManager.GetSavedWorkflows();
-            var textElement = libraryDropdown?.Q<TextElement>(className: "unity-base-popup-field__text");
-            if (textElement != null)
-            {
-                textElement.text = workflows.Count == 0 
-                    ? "No workflows - click Import" 
-                    : "Select a workflow...";
-            }
-        }
+        libraryPicker?.SetActiveWorkflowLoaded(isWorkflowLoaded);
+        libraryPicker?.SetDeleteEnabled(isWorkflowLoaded);
+        libraryPicker?.RefreshPlaceholderForEmptyState(isWorkflowLoaded);
 
         if (isWorkflowLoaded)
         {
@@ -515,10 +300,14 @@ public class AtlasWorkflowEditor : EditorWindow
         }
     }
 
+    private void OnJobSelectedForStatus(AtlasWorkflowJobState job)
+    {
+        SelectJob(job);
+    }
+
     private void SelectJob(AtlasWorkflowJobState job)
     {
-        selectedJob = job;
-        if (job == null || jobView == null) return;
+        if (jobView == null) return;
 
         var statusLabel = jobView.Q<Label>("status-label");
         if (statusLabel != null)
@@ -526,32 +315,6 @@ public class AtlasWorkflowEditor : EditorWindow
             statusLabel.text = (job == null)
                 ? "Idle"
                 : $"Last job: {job.Status} ({job.CreatedAtUtc.ToLocalTime():HH:mm:ss})";
-        }
-    }
-
-    private void PopulateLibraryDropdown()
-    {
-        var workflows = WorkflowManager.GetSavedWorkflows().Select(Path.GetFileName).ToList();
-        libraryDropdown.choices = workflows;
-        
-        // Set placeholder text when no workflow is selected
-        if (string.IsNullOrEmpty(libraryDropdown.value) || !workflows.Contains(libraryDropdown.value))
-        {
-            if (workflows.Count == 0)
-            {
-                libraryDropdown.SetValueWithoutNotify("");
-                // Use a visual hint through the text input
-                var textElement = libraryDropdown.Q<TextElement>(className: "unity-base-popup-field__text");
-                if (textElement != null)
-                    textElement.text = "No workflows - click Import";
-            }
-            else
-            {
-                libraryDropdown.SetValueWithoutNotify("");
-                var textElement = libraryDropdown.Q<TextElement>(className: "unity-base-popup-field__text");
-                if (textElement != null)
-                    textElement.text = "Select a workflow...";
-            }
         }
     }
 
@@ -568,7 +331,4 @@ public class AtlasWorkflowEditor : EditorWindow
     }
 
     #endregion
-
-
-
 }

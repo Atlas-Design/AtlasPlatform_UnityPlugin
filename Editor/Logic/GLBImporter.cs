@@ -489,19 +489,48 @@ namespace Atlas.Workflow
             return AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
         }
 
+        /// <summary>
+        /// Ensures a byte range in the GLB BIN chunk is readable (guards corrupt/truncated files).
+        /// </summary>
+        private static void EnsureBinaryRange(byte[] chunk, long startByte, long byteLength)
+        {
+            if (chunk == null)
+                throw new Exception("GLB has no binary buffer for mesh data");
+            if (byteLength < 0 || startByte < 0)
+                throw new Exception("GLB accessor has invalid offset or length");
+            if (startByte + byteLength > chunk.Length)
+                throw new Exception("GLB accessor read out of bounds (invalid or truncated file)");
+        }
+
         private static Vector3[] ReadVec3Accessor(GLBData glb, JArray accessors, JArray bufferViews, int accessorIndex)
         {
+            if (accessorIndex < 0 || accessorIndex >= accessors.Count)
+                throw new Exception("GLB accessor index out of range");
+
             var accessor = accessors[accessorIndex];
             int count = accessor["count"].Value<int>();
+            if (count < 0)
+                throw new Exception("GLB accessor has negative vertex count");
+            if (count == 0)
+                return new Vector3[0];
+
             int bvIndex = accessor["bufferView"].Value<int>();
+            if (bvIndex < 0 || bvIndex >= bufferViews.Count)
+                throw new Exception("GLB bufferView index out of range");
+
             int accOffset = accessor["byteOffset"]?.Value<int>() ?? 0;
 
             var bv = bufferViews[bvIndex];
             int bvOffset = bv["byteOffset"]?.Value<int>() ?? 0;
             int stride = bv["byteStride"]?.Value<int>() ?? 12; // Default for Vec3 float
+            if (stride < 12)
+                throw new Exception("GLB vec3 accessor stride is too small");
+
+            int dataOffset = bvOffset + accOffset;
+            long spanBytes = (long)(count - 1) * stride + 12L;
+            EnsureBinaryRange(glb.BinaryChunk, dataOffset, spanBytes);
 
             Vector3[] result = new Vector3[count];
-            int dataOffset = bvOffset + accOffset;
 
             for (int i = 0; i < count; i++)
             {
@@ -519,17 +548,33 @@ namespace Atlas.Workflow
 
         private static Vector2[] ReadVec2Accessor(GLBData glb, JArray accessors, JArray bufferViews, int accessorIndex)
         {
+            if (accessorIndex < 0 || accessorIndex >= accessors.Count)
+                throw new Exception("GLB accessor index out of range");
+
             var accessor = accessors[accessorIndex];
             int count = accessor["count"].Value<int>();
+            if (count < 0)
+                throw new Exception("GLB accessor has negative vertex count");
+            if (count == 0)
+                return new Vector2[0];
+
             int bvIndex = accessor["bufferView"].Value<int>();
+            if (bvIndex < 0 || bvIndex >= bufferViews.Count)
+                throw new Exception("GLB bufferView index out of range");
+
             int accOffset = accessor["byteOffset"]?.Value<int>() ?? 0;
 
             var bv = bufferViews[bvIndex];
             int bvOffset = bv["byteOffset"]?.Value<int>() ?? 0;
             int stride = bv["byteStride"]?.Value<int>() ?? 8; // Default for Vec2 float
+            if (stride < 8)
+                throw new Exception("GLB vec2 accessor stride is too small");
+
+            int dataOffset = bvOffset + accOffset;
+            long spanBytes = (long)(count - 1) * stride + 8L;
+            EnsureBinaryRange(glb.BinaryChunk, dataOffset, spanBytes);
 
             Vector2[] result = new Vector2[count];
-            int dataOffset = bvOffset + accOffset;
 
             for (int i = 0; i < count; i++)
             {
@@ -546,17 +591,39 @@ namespace Atlas.Workflow
 
         private static int[] ReadIndicesAccessor(GLBData glb, JArray accessors, JArray bufferViews, int accessorIndex)
         {
+            if (accessorIndex < 0 || accessorIndex >= accessors.Count)
+                throw new Exception("GLB accessor index out of range");
+
             var accessor = accessors[accessorIndex];
             int count = accessor["count"].Value<int>();
+            if (count < 0)
+                throw new Exception("GLB accessor has negative index count");
+
             int componentType = accessor["componentType"].Value<int>();
             int bvIndex = accessor["bufferView"].Value<int>();
+            if (bvIndex < 0 || bvIndex >= bufferViews.Count)
+                throw new Exception("GLB bufferView index out of range");
+
             int accOffset = accessor["byteOffset"]?.Value<int>() ?? 0;
 
             var bv = bufferViews[bvIndex];
             int bvOffset = bv["byteOffset"]?.Value<int>() ?? 0;
 
-            int[] result = new int[count];
             int dataOffset = bvOffset + accOffset;
+            int elementSize = componentType switch
+            {
+                5121 => 1,
+                5123 => 2,
+                5125 => 4,
+                _ => 0
+            };
+            if (elementSize == 0)
+                throw new Exception($"Unsupported index component type: {componentType}");
+
+            if (count > 0)
+                EnsureBinaryRange(glb.BinaryChunk, dataOffset, (long)count * elementSize);
+
+            int[] result = new int[count];
 
             // Read indices based on component type
             for (int i = 0; i < count; i++)

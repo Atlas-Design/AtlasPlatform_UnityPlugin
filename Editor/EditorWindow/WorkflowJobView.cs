@@ -1,5 +1,6 @@
 // In Packages/com.atlas.workflow/Editor/EditorWindow/WorkflowJobView.cs
 
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -15,6 +16,13 @@ public class WorkflowJobView : VisualElement
     private ProgressBar progressBar;
     private VisualElement inputsContainer;
     private VisualElement outputsContainer;
+    private VisualElement jobErrorRow;
+    private Label jobErrorLabel;
+    private VisualElement jobRetryRow;
+    private Button jobRetryButton;
+    private Action _retryClickAction;
+
+    private const int JobErrorPreviewMaxChars = 200;
 
     public WorkflowJobView()
     {
@@ -35,6 +43,10 @@ public class WorkflowJobView : VisualElement
         progressBar = this.Q<ProgressBar>("progress-bar");
         inputsContainer = this.Q<VisualElement>("inputs-container");
         outputsContainer = this.Q<VisualElement>("outputs-container");
+        jobErrorRow = this.Q<VisualElement>("job-error-row");
+        jobErrorLabel = this.Q<Label>("job-error-label");
+        jobRetryRow = this.Q<VisualElement>("job-retry-row");
+        jobRetryButton = this.Q<Button>("job-retry-button");
     }
 
     // Public method to update this component's UI from the state object.
@@ -56,7 +68,7 @@ public class WorkflowJobView : VisualElement
                 string version = string.IsNullOrEmpty(state.Version) ? "" : $"v{state.Version}";
                 
                 if (!string.IsNullOrEmpty(version) && !string.IsNullOrEmpty(domain))
-                    workflowSubtitle.text = $"{version} ? {domain}";
+                    workflowSubtitle.text = $"{version} \u2022 {domain}";
                 else if (!string.IsNullOrEmpty(domain))
                     workflowSubtitle.text = domain;
                 else if (!string.IsNullOrEmpty(version))
@@ -82,6 +94,23 @@ public class WorkflowJobView : VisualElement
         // Use the UIBuilder to populate the dynamic lists
         uiBuilder.PopulateInputs(inputsContainer);
         uiBuilder.PopulateOutputs(outputsContainer);
+
+        if (jobErrorRow != null)
+            jobErrorRow.style.display = DisplayStyle.None;
+        if (jobErrorLabel != null)
+        {
+            jobErrorLabel.text = "";
+            jobErrorLabel.tooltip = "";
+        }
+
+        // Single-workflow panel (Populate) — never show job-history-only retry UI.
+        if (jobRetryRow != null)
+            jobRetryRow.style.display = DisplayStyle.None;
+        if (jobRetryButton != null && _retryClickAction != null)
+        {
+            jobRetryButton.clicked -= _retryClickAction;
+            _retryClickAction = null;
+        }
     }
     
     /// <summary>
@@ -101,10 +130,16 @@ public class WorkflowJobView : VisualElement
         }
     }
 
-    public void PopulateFromJob(AtlasWorkflowJobState job, WorkflowParamRenderer renderer)
+    public void PopulateFromJob(AtlasWorkflowJobState job, WorkflowParamRenderer renderer, Action onRetryRequested = null)
     {
         if (job == null || renderer == null)
             return;
+
+        if (jobRetryButton != null && _retryClickAction != null)
+        {
+            jobRetryButton.clicked -= _retryClickAction;
+            _retryClickAction = null;
+        }
 
         // Set job context for import folder detection
         renderer.SetJobContext(job);
@@ -120,11 +155,52 @@ public class WorkflowJobView : VisualElement
         {
             var localStart = job.CreatedAtUtc.ToLocalTime();
             string duration = FormatJobDurationForHeader(job);
-            
-            if (!string.IsNullOrEmpty(duration))
-                workflowSubtitle.text = $"{localStart:MMM d, HH:mm} • {duration}";
+
+            string baseLine = !string.IsNullOrEmpty(duration)
+                ? $"{localStart:MMM d, HH:mm} • {duration}"
+                : $"{localStart:MMM d, HH:mm}";
+
+            if (!string.IsNullOrEmpty(job.RetryOfJobId))
+            {
+                string shortPrev = job.RetryOfJobId.Length > 8
+                    ? job.RetryOfJobId.Substring(0, 8) + "…"
+                    : job.RetryOfJobId;
+                baseLine += $" • Retry of {shortPrev}";
+            }
+
+            workflowSubtitle.text = baseLine;
+        }
+
+        // --- Error (API / workflow message when present) ---
+        string err = job.ErrorMessage != null ? job.ErrorMessage.Trim() : "";
+        bool hasErrorText = err.Length > 0;
+        if (jobErrorRow != null)
+            jobErrorRow.style.display = hasErrorText ? DisplayStyle.Flex : DisplayStyle.None;
+        if (jobErrorLabel != null)
+        {
+            if (hasErrorText)
+            {
+                jobErrorLabel.tooltip = err;
+                jobErrorLabel.text = err.Length > JobErrorPreviewMaxChars
+                    ? err.Substring(0, JobErrorPreviewMaxChars).TrimEnd() + "…"
+                    : err;
+            }
             else
-                workflowSubtitle.text = $"{localStart:MMM d, HH:mm}";
+            {
+                jobErrorLabel.text = "";
+                jobErrorLabel.tooltip = "";
+            }
+        }
+
+        // --- Retry (failed / cancelled only) ---
+        bool canRetry = onRetryRequested != null &&
+                        (job.Status == JobStatus.Failed || job.Status == JobStatus.Cancelled);
+        if (jobRetryRow != null)
+            jobRetryRow.style.display = canRetry ? DisplayStyle.Flex : DisplayStyle.None;
+        if (jobRetryButton != null && canRetry)
+        {
+            _retryClickAction = () => onRetryRequested();
+            jobRetryButton.clicked += _retryClickAction;
         }
         
         // --- Status dot color ---
@@ -198,6 +274,7 @@ public class WorkflowJobView : VisualElement
             case JobStatus.Running: return Color.yellow;
             case JobStatus.Succeeded: return Color.green;
             case JobStatus.Failed: return Color.red;
+            case JobStatus.Cancelled: return new Color(0.75f, 0.55f, 0.35f);
             default: return Color.gray;
         }
     }

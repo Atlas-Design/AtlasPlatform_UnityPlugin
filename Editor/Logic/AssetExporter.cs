@@ -31,43 +31,43 @@ public static class AssetExporter
 
         AtlasLogger.LogFile($"Exporting texture '{texture.name}' as PNG...");
 
-        // --- Step 1: Create a temporary RenderTexture ---
-        // This acts as a temporary, uncompressed "canvas" in GPU memory.
-        RenderTexture tmp = RenderTexture.GetTemporary(
-            texture.width,
-            texture.height,
-            0,
-            RenderTextureFormat.Default,
-            RenderTextureReadWrite.Linear);
+        RenderTexture tmp = null;
+        Texture2D readableTexture = null;
+        RenderTexture previous = RenderTexture.active;
 
-        // --- Step 2: Blit (copy) the texture to the RenderTexture ---
-        // This uses the GPU to decompress the texture and draw it onto our canvas.
-        Graphics.Blit(texture, tmp);
+        try
+        {
+            tmp = RenderTexture.GetTemporary(
+                texture.width,
+                texture.height,
+                0,
+                RenderTextureFormat.Default,
+                RenderTextureReadWrite.Linear);
 
-        // --- Step 3: Read the pixels back from the RenderTexture ---
-        RenderTexture previous = RenderTexture.active; // Save the currently active render texture
-        RenderTexture.active = tmp;                   // Set our temporary canvas as the active one
+            Graphics.Blit(texture, tmp);
 
-        // Create a new, readable Texture2D to receive the pixels
-        Texture2D readableTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
-        readableTexture.ReadPixels(new Rect(0, 0, tmp.width, tmp.height), 0, 0);
-        readableTexture.Apply();
+            RenderTexture.active = tmp;
 
-        RenderTexture.active = previous;              // Restore the original active render texture
-        RenderTexture.ReleaseTemporary(tmp);          // Release the temporary canvas
+            readableTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+            readableTexture.ReadPixels(new Rect(0, 0, tmp.width, tmp.height), 0, 0);
+            readableTexture.Apply();
 
-        // --- Step 4: Encode the uncompressed texture to PNG ---
-        byte[] pngData = readableTexture.EncodeToPNG();
+            byte[] pngData = readableTexture.EncodeToPNG();
 
-        // Clean up the temporary Texture2D object we created
-        UnityEngine.Object.DestroyImmediate(readableTexture);
+            string tempFilePath = Path.Combine(GetTempDirectory(), $"{texture.name}_{System.Guid.NewGuid()}.png");
+            await File.WriteAllBytesAsync(tempFilePath, pngData);
 
-        // --- Step 5: Save the PNG file ---
-        string tempFilePath = Path.Combine(GetTempDirectory(), $"{texture.name}_{System.Guid.NewGuid()}.png");
-        await File.WriteAllBytesAsync(tempFilePath, pngData);
-
-        AtlasLogger.LogFile($"Exported texture to: {tempFilePath} ({pngData.Length} bytes)");
-        return tempFilePath;
+            AtlasLogger.LogFile($"Exported texture to: {tempFilePath} ({pngData.Length} bytes)");
+            return tempFilePath;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            if (tmp != null)
+                RenderTexture.ReleaseTemporary(tmp);
+            if (readableTexture != null)
+                UnityEngine.Object.DestroyImmediate(readableTexture);
+        }
     }
 
     #endregion

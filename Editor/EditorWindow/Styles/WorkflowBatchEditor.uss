@@ -1,0 +1,270 @@
+/* Batch editor — extends AtlasWorkflowEditor.uss (library + primary-panel headers). */
+
+.batch-editor-root {
+    flex-grow: 1;
+    flex-direction: column;
+    min-width: 420px;
+    min-height: 360px;
+}
+
+.batch-editor-scroll {
+    flex-grow: 1;
+}
+
+/* Edge-to-edge sections like single workflow editor (no horizontal inset on scroll content). */
+.batch-scroll-content {
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0 0 10px 0;
+}
+
+.batch-section-spaced {
+    margin-bottom: 10px;
+}
+
+/* No extra margin below library — matches single editor spacing (avoids double gap vs .batch-section-spaced). */
+.batch-library-section.section-box {
+    margin-bottom: 0;
+}
+
+.batch-workflow-picker-host {
+    margin-bottom: 0;
+}
+
+/* Same 5px inset as single editor’s .job-view-host, without flex-grow:1 (that would swallow space above instance rows). */
+.batch-selected-workflow-host {
+    flex-shrink: 0;
+    flex-grow: 0;
+    padding: 5px;
+    min-height: 0;
+}
+
+/* Bordered block inside .batch-selected-workflow-host (5px padding = single editor workflow header inset). */
+.batch-active-workflow-strip {
+    flex-shrink: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 3px;
+    border-width: 1px;
+    border-color: rgb(30, 30, 30);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.batch-rows-host {
+    flex-direction: column;
+}
+
+/* Toolbar sits below instance cards: list actions (left) vs file draft I/O (right). */
+.batch-rows-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+.batch-rows-toolbar-group {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Secondary — disk draft save/load (not the same category as “add instance row”) */
+.batch-file-action-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: rgb(48, 48, 48);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(68, 68, 68);
+    color: rgb(195, 200, 205);
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.batch-file-action-btn:hover {
+    background-color: rgb(56, 56, 56);
+    border-color: rgb(88, 88, 88);
+    color: rgb(235, 238, 242);
+}
+
+.batch-file-action-btn--last {
+    margin-right: 0;
+}
+
+.batch-rows-content {
+    flex-direction: column;
+}
+
+.batch-row-card {
+    margin-bottom: 5px;
+    padding: 8px 10px 10px 10px;
+    background-color: rgb(45, 45, 45);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(50, 50, 50);
+}
+
+.batch-row-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.batch-row-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(219, 233, 255);
+    margin-right: 8px;
+}
+
+/* Prevent Unity theme from stretching toolbar buttons to full row width */
+.batch-row-header > Button {
+    flex-grow: 0;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.batch-row-tool-btn {
+    margin-left: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.batch-row-tool-btn--accent {
+    margin-left: 6px;
+}
+
+.batch-row-issues {
+    font-size: 10px;
+    color: rgb(255, 160, 140);
+    white-space: normal;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    background-color: rgba(80, 40, 40, 0.35);
+    border-radius: 3px;
+}
+
+.batch-row-inputs {
+    flex-direction: column;
+}
+
+.batch-settings-host {
+    flex-direction: column;
+}
+
+/* Align editor fields with library / param inputs */
+.batch-settings-host .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0.25);
+    border-width: 1px;
+    border-color: rgb(40, 40, 40);
+    border-radius: 3px;
+}
+
+.batch-status-label {
+    font-size: 11px;
+    color: rgb(200, 220, 200);
+    margin-top: 4px;
+    white-space: normal;
+    padding: 8px 10px;
+    background-color: rgba(40, 55, 40, 0.35);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(80, 110, 80, 0.4);
+}
+
+.batch-editor-footer {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    background-color: rgb(65, 65, 65);
+    border-top-width: 1px;
+    border-top-color: rgba(0, 0, 0, 0.69);
+}
+
+.batch-editor-footer-spacer {
+    flex-grow: 1;
+    min-width: 8px;
+}
+
+.batch-cancel-run-button {
+    min-width: 100px;
+    margin-left: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: rgb(100, 60, 60);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(130, 80, 80);
+    color: rgb(240, 200, 200);
+}
+
+.batch-cancel-run-button:hover {
+    background-color: rgb(140, 70, 70);
+    border-color: rgb(170, 100, 100);
+    color: white;
+}
+
+/* Primary Run on the right; gap after Cancel when both visible */
+.batch-editor-footer .batch-run-button {
+    margin-left: 8px;
+}
+
+.batch-run-button {
+    min-width: 120px;
+    height: 32px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    background-color: rgb(60, 100, 65);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(80, 130, 85);
+    color: rgb(230, 255, 230);
+}
+
+.batch-run-button:hover {
+    background-color: rgb(70, 115, 75);
+    border-color: rgb(100, 150, 105);
+    color: white;
+}
+
+.batch-run-button:active {
+    background-color: rgb(50, 85, 55);
+}
+
+.batch-run-button:disabled {
+    background-color: rgb(55, 58, 55);
+    border-color: rgb(70, 75, 70);
+    color: rgb(110, 120, 110);
+}
+
+.batch-open-workflow-jobs-button,
+#batch-open-workflow-jobs-button {
+    min-width: 140px;
+    height: 32px;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 4px 12px;
+    font-size: 12px;
+    background-color: rgb(70, 70, 70);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(95, 95, 95);
+    color: rgb(220, 220, 220);
+    flex-shrink: 0;
+}
+
+.batch-open-workflow-jobs-button:hover,
+#batch-open-workflow-jobs-button:hover {
+    background-color: rgb(85, 85, 85);
+    border-color: rgb(110, 110, 110);
+    color: white;
+}

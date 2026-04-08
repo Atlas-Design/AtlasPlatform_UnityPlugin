@@ -10,15 +10,23 @@ using UnityEngine.UIElements;
 public class WorkflowParamRenderer
 {
     private readonly AtlasWorkflowState state;
+    private readonly bool _markWorkflowAssetDirtyOnInputChange;
     private readonly VisualTreeAsset boolIn, numIn, strIn, imgIn, meshIn;
-    private readonly VisualTreeAsset boolOut, numOut, strOut, imgOut, meshOut;
+    private readonly VisualTreeAsset boolOut, numOut, strOut, imgOut, meshOut, audioOut;
     
     // Current job context for import folder generation
     private AtlasWorkflowJobState currentJob;
 
-    public WorkflowParamRenderer(AtlasWorkflowState state)
+    /// <summary>
+    /// Raised after any editable input mutates its backing <see cref="AtlasWorkflowParamState"/>.
+    /// Use for batch rows where values are not persisted on the workflow asset.
+    /// </summary>
+    public event System.Action InputValuesMutated;
+
+    public WorkflowParamRenderer(AtlasWorkflowState state, bool markWorkflowAssetDirtyOnInputChange = true)
     {
         this.state = state;
+        _markWorkflowAssetDirtyOnInputChange = markWorkflowAssetDirtyOnInputChange;
 
         // Load Templates once
         boolIn = LoadTemplate("_ParamInputBoolean");
@@ -32,6 +40,7 @@ public class WorkflowParamRenderer
         strOut = LoadTemplate("_ParamOutputString");
         imgOut = LoadTemplate("_ParamOutputImage");
         meshOut = LoadTemplate("_ParamOutputMesh");
+        audioOut = LoadTemplate("_ParamOutputAudio");
     }
 
     /// <summary>
@@ -115,6 +124,29 @@ public class WorkflowParamRenderer
         return null;
     }
 
+    /// <summary>
+    /// Tries to find an existing imported <see cref="AudioClip"/> for the current job and param.
+    /// </summary>
+    private AudioClip FindExistingImportedAudioClip(string paramId)
+    {
+        string folder = GetImportFolderPath();
+        if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+            return null;
+
+        string sanitizedName = SanitizeFolderName(paramId);
+        string[] extensions = { ".mp3", ".wav", ".ogg", ".m4a", ".aiff", ".flac", ".aif" };
+
+        foreach (var ext in extensions)
+        {
+            string clipPath = $"{folder}/{sanitizedName}{ext}";
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+            if (clip != null)
+                return clip;
+        }
+
+        return null;
+    }
+
     private static string SanitizeFolderName(string name)
     {
         if (string.IsNullOrEmpty(name))
@@ -139,6 +171,8 @@ public class WorkflowParamRenderer
             case ParamType.@string: return CreateStringInput(param, isEditable);
             case ParamType.image: return CreateImageInput(param, isEditable);
             case ParamType.mesh: return CreateMeshInput(param, isEditable);
+            case ParamType.audio:
+                return CreateUnsupportedAudioInputRow(param.Label);
             default: return new Label($"Unknown Input Type: {param.ParamType}");
         }
     }
@@ -152,6 +186,7 @@ public class WorkflowParamRenderer
             case ParamType.@string: return CreateStringOutput(param);
             case ParamType.image: return CreateImageOutput(param, isEditable);
             case ParamType.mesh: return CreateMeshOutput(param, isEditable);
+            case ParamType.audio: return CreateAudioOutput(param, isEditable);
             default: return new Label($"Unknown Output Type: {param.ParamType}");
         }
     }
@@ -181,8 +216,10 @@ public class WorkflowParamRenderer
         label.AddToClassList("param-label");
         row.Add(label);
 
-        // Pending status
-        var statusLabel = new Label("(pending)");
+        var statusText = param.ParamType == ParamType.audio
+            ? (string.IsNullOrEmpty(param.Format) ? "(pending · audio)" : $"(pending · {param.Format})")
+            : "(pending)";
+        var statusLabel = new Label(statusText);
         statusLabel.AddToClassList("output-preview-status");
         row.Add(statusLabel);
 
@@ -455,6 +492,95 @@ public class WorkflowParamRenderer
         return row;
     }
 
+    private static VisualElement CreateUnsupportedAudioInputRow(string label)
+    {
+        var row = new VisualElement();
+        row.AddToClassList("param-row");
+        row.Add(new Label(string.IsNullOrEmpty(label)
+            ? "Audio input is not supported in this plugin version."
+            : $"{label}: audio input is not supported in this plugin version."));
+        return row;
+    }
+
+    private VisualElement CreateAudioOutput(AtlasWorkflowParamState outputState, bool _editable)
+    {
+        var template = audioOut != null ? audioOut : meshOut;
+        var root = template != null ? template.CloneTree() : strOut.CloneTree();
+        var header = root.Q<VisualElement>(className: "param-row-header") ?? root.Q<VisualElement>(className: "param-row") ?? root;
+        SetupLabel(header, outputState.Label);
+        WorkflowGUIUtils.StyleTypeIndicator(root, outputState.ParamType);
+
+        string tempPath = outputState.FilePath;
+        bool hasFile = !string.IsNullOrEmpty(tempPath) && File.Exists(tempPath);
+
+        var importButton = root.Q<Button>("import-button");
+        var assetField = root.Q<ObjectField>("imported-asset-field");
+        var sourceLabel = root.Q<Label>("source-file-label");
+
+        if (assetField != null)
+        {
+            assetField.objectType = typeof(AudioClip);
+            assetField.SetEnabled(false);
+        }
+
+        AudioClip existingClip = FindExistingImportedAudioClip(outputState.ParamId);
+        bool alreadyImported = existingClip != null;
+        if (assetField != null && alreadyImported)
+            assetField.value = existingClip;
+
+        void UpdateSourceLabel()
+        {
+            if (sourceLabel == null)
+                return;
+            if (hasFile)
+            {
+                sourceLabel.text = TruncateFilePath(tempPath);
+                sourceLabel.tooltip = tempPath;
+            }
+            else
+            {
+                string fmt = string.IsNullOrEmpty(outputState.Format) ? "" : $" .{outputState.Format.TrimStart('.')}";
+                sourceLabel.text = $"(no file yet){fmt}";
+                sourceLabel.tooltip = string.IsNullOrEmpty(outputState.Format)
+                    ? "Run the workflow to generate audio."
+                    : $"Expected format: {outputState.Format}";
+            }
+        }
+        UpdateSourceLabel();
+
+        if (importButton != null)
+        {
+            if (!hasFile)
+            {
+                importButton.text = "No file yet";
+                importButton.SetEnabled(false);
+            }
+            else
+            {
+                importButton.text = alreadyImported ? "Re-import" : "Import Audio";
+                importButton.SetEnabled(true);
+                importButton.clicked += () =>
+                {
+                    ImportAudioToAssets(tempPath, outputState.ParamId, outputState.Format, assetField);
+                };
+            }
+        }
+
+        if (importButton == null && sourceLabel == null && assetField == null)
+        {
+            var field = root.Q<TextField>("value-field");
+            if (field != null)
+            {
+                string fmt = string.IsNullOrEmpty(outputState.Format) ? "" : $".{outputState.Format}";
+                field.value = hasFile ? tempPath : $"(pending) audio{fmt}";
+                field.SetEnabled(false);
+                field.isReadOnly = true;
+            }
+        }
+
+        return root;
+    }
+
     private VisualElement CreateImageOutput(AtlasWorkflowParamState outputState, bool editable)
     {
         var root = imgOut.CloneTree();
@@ -647,6 +773,53 @@ public class WorkflowParamRenderer
     }
 
     /// <summary>
+    /// Copies a generated audio file (e.g. .mp3) into the job import folder and imports it as an <see cref="AudioClip"/>.
+    /// </summary>
+    private void ImportAudioToAssets(string sourcePath, string paramId, string formatHint, ObjectField assetField)
+    {
+        string folder = GetImportFolderPath();
+        if (string.IsNullOrEmpty(folder))
+        {
+            folder = SettingsManager.GetSavePath();
+            if (string.IsNullOrEmpty(folder))
+                folder = "Assets/Atlas/Imported";
+        }
+
+        try
+        {
+            EnsureFolderExists(folder);
+
+            string sanitizedName = SanitizeFolderName(paramId);
+            string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension))
+            {
+                var fmt = formatHint?.Trim().TrimStart('.').ToLowerInvariant();
+                extension = string.IsNullOrEmpty(fmt) ? ".mp3" : "." + fmt;
+            }
+
+            string destPath = $"{folder}/{sanitizedName}{extension}";
+
+            File.Copy(sourcePath, destPath, overwrite: true);
+            AssetDatabase.ImportAsset(destPath, ImportAssetOptions.ForceSynchronousImport);
+
+            var imported = AssetDatabase.LoadAssetAtPath<AudioClip>(destPath);
+            if (imported != null)
+            {
+                if (assetField != null)
+                    assetField.value = imported;
+                EditorGUIUtility.PingObject(imported);
+                AtlasLogger.Log($"Imported audio clip: {destPath}");
+            }
+            else
+                AtlasLogger.LogError($"[Atlas] Failed to load imported audio as AudioClip: {destPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Atlas] Error importing audio: {ex.Message}\n{ex.StackTrace}");
+        }
+    }
+
+    /// <summary>
     /// Ensures an asset folder exists, creating it recursively if needed.
     /// </summary>
     private static void EnsureFolderExists(string path)
@@ -812,7 +985,9 @@ public class WorkflowParamRenderer
 
     private void SaveState()
     {
-        EditorUtility.SetDirty(state);
+        InputValuesMutated?.Invoke();
+        if (_markWorkflowAssetDirtyOnInputChange)
+            EditorUtility.SetDirty(state);
     }
 
     /// <summary>

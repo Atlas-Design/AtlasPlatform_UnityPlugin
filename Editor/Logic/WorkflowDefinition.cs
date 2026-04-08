@@ -11,7 +11,8 @@ public enum ParamType
     number,
     @string,
     image,
-    mesh
+    mesh,
+    audio
 }
 
 // A plain C# class to hold the data for a single input parameter.

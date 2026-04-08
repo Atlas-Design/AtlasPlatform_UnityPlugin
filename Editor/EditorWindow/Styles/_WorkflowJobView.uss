@@ -5,12 +5,16 @@
     background-color: rgb(55, 55, 55);
     margin: 5px;
     flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
     flex-direction: column;
     overflow: hidden;
 }
 
 #job-content-scroll {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
 }
 
 /* ========================================
@@ -67,6 +71,54 @@
     color: rgb(180, 180, 180);
     flex-shrink: 0;
     margin-left: 10px;
+}
+
+/* Single-line failure hint (full text in tooltip) — only visible when job has ErrorMessage */
+.job-error-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: rgb(58, 42, 40);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(40, 30, 28);
+}
+
+.job-error-label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 10px;
+    color: rgb(235, 200, 195);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.job-retry-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px 8px 10px;
+    background-color: rgb(50, 50, 50);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(35, 35, 35);
+}
+
+.job-retry-button {
+    padding: 4px 12px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: rgb(70, 100, 75);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(90, 130, 95);
+    color: rgb(220, 240, 220);
+    align-self: flex-start;
+}
+
+.job-retry-button:hover {
+    background-color: rgb(85, 120, 90);
+    border-color: rgb(110, 150, 115);
+    color: white;
 }
 
 .progress-bar {
@@ -128,6 +180,72 @@
     font-size: 11px;
 }
 
+/* Batches catalog row (one row per BatchId) */
+.batch-history-row {
+    margin: 2px 2px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(58, 72, 88);
+    background-color: rgb(44, 50, 58);
+    flex-direction: column;
+    align-items: stretch;
+    cursor: link;
+}
+
+.batch-history-row:hover {
+    background-color: rgb(50, 58, 70);
+    border-color: rgb(75, 95, 120);
+}
+
+.batch-history-row__title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(210, 215, 225);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.batch-history-row__meta {
+    font-size: 9px;
+    color: rgb(130, 138, 150);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.batch-history-row__row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.batch-drill-back-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 4px 6px 4px;
+    flex-shrink: 0;
+}
+
+.batch-drill-back-btn {
+    height: 20px;
+    padding: 1px 10px;
+    font-size: 10px;
+    border-radius: 3px;
+    background-color: rgb(52, 58, 68);
+    border-width: 1px;
+    border-color: rgb(75, 85, 100);
+    color: rgb(200, 210, 225);
+    align-self: flex-start;
+}
+
+.batch-drill-back-btn:hover {
+    background-color: rgb(60, 68, 80);
+    border-color: rgb(95, 135, 185);
+}
+
 #jobs-panel {
     padding: 0;
     background-color: rgb(32, 32, 32);
@@ -183,6 +301,80 @@
     padding-right: 4px;
     padding-bottom: 2px;
     padding-left: 4px;
+}
+
+/* ========================================
+   Job History: Jobs vs Batches view selector
+   ======================================== */
+
+.view-mode-panel {
+    flex-direction: column;
+    flex-shrink: 0;
+    margin-left: 2px;
+    margin-right: 2px;
+    margin-top: 0;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(35, 35, 35);
+}
+
+.view-mode-options-row {
+    flex-direction: row;
+    flex-grow: 1;
+    /* USS: use flex-start; children use flex-grow to share width (not justify-content: stretch) */
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+/* Match filter-chip row height (~18px) so Jobs/Batches align with Status/Type/Date */
+.view-mode-option {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-height: 18px;
+    max-height: 18px;
+    height: 18px;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-right: 4px;
+    padding: 1px 6px;
+    font-size: 9px;
+    border-radius: 2px;
+    background-color: rgb(55, 55, 55);
+    border-width: 1px;
+    border-color: rgb(70, 70, 70);
+    color: rgb(175, 175, 175);
+    -unity-text-align: middle-center;
+    overflow: hidden;
+}
+
+/* Win over editor theme defaults on unity-button (often ~22px min-height) */
+.view-mode-option.unity-button {
+    min-height: 18px;
+    max-height: 18px;
+    height: 18px;
+}
+
+.view-mode-option:hover {
+    background-color: rgb(62, 62, 62);
+    border-color: rgb(85, 85, 85);
+}
+
+.view-mode-option--active {
+    background-color: rgb(52, 68, 92);
+    border-color: rgb(95, 135, 185);
+    color: rgb(235, 240, 250);
+}
+
+.view-mode-option--active:hover {
+    background-color: rgb(58, 75, 100);
+    border-color: rgb(105, 145, 195);
+}
+
+/* Trailing option: zero right margin (explicit class; avoid unsupported structural selectors in USS) */
+.view-mode-option--last {
+    margin-right: 0;
 }
 
 /* ========================================
@@ -465,4 +657,13 @@
     font-size: 10px;
     color: rgb(150, 150, 150);
     min-width: 45px;
+}
+
+.running-job-stop {
+    margin-left: 6px;
+    font-size: 9px;
+    min-width: 52px;
+    height: 18px;
+    padding-left: 6px;
+    padding-right: 6px;
 }

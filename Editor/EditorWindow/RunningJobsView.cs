@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -9,11 +10,14 @@ public class RunningJobsView
     private readonly VisualElement panelRoot;
     private readonly ScrollView listRoot;
     private VisualTreeAsset jobHeaderTemplate;
+    private readonly Action<AtlasWorkflowJobState> onStopJob;
+    private string activeRunningJobId;
 
-    public RunningJobsView(VisualElement panelRoot, ScrollView listRoot)
+    public RunningJobsView(VisualElement panelRoot, ScrollView listRoot, Action<AtlasWorkflowJobState> onStopJob = null)
     {
         this.panelRoot = panelRoot;
         this.listRoot = listRoot;
+        this.onStopJob = onStopJob;
 
         LoadTemplate();
     }
@@ -28,8 +32,12 @@ public class RunningJobsView
         }
     }
 
-    public void Refresh(List<AtlasWorkflowJobState> jobs)
+    /// <param name="jobs">All jobs; only Running are shown.</param>
+    /// <param name="activeRunningJobId">Job currently executing in this editor session (Cancel vs Dismiss label).</param>
+    public void Refresh(List<AtlasWorkflowJobState> jobs, string activeRunningJobId = null)
     {
+        this.activeRunningJobId = activeRunningJobId;
+
         if (panelRoot == null || listRoot == null)
             return;
 
@@ -41,7 +49,6 @@ public class RunningJobsView
 
         if (running.Count == 0)
         {
-            // Hide the whole panel when nothing is running
             panelRoot.style.display = DisplayStyle.None;
             return;
         }
@@ -70,10 +77,18 @@ public class RunningJobsView
         var totalTimeField = row.Q<Label>("TotalTime");
         var progressBar = row.Q<ProgressBar>("Progress");
         var spinner = row.Q<VisualElement>("Spinner");
+        var stopButton = row.Q<Button>("StopJob");
 
-        // Left side - job info
         if (titleField != null)
+        {
             titleField.text = job.WorkflowName ?? "Unnamed";
+            if (job.BatchIndex.HasValue && !string.IsNullOrEmpty(job.BatchId))
+            {
+                titleField.text += $"  ·  batch #{job.BatchIndex.Value + 1}";
+                var label = string.IsNullOrEmpty(job.BatchName) ? job.BatchId : job.BatchName;
+                titleField.tooltip = $"Batch: {label}";
+            }
+        }
 
         if (startTimeField != null)
         {
@@ -81,19 +96,28 @@ public class RunningJobsView
             startTimeField.text = "Started " + localStart.ToString("HH:mm:ss");
         }
 
-        // Right side - status
         if (statusField != null)
-        {
             statusField.text = job.Status.ToString();
-        }
 
         if (totalTimeField != null)
         {
-            var elapsed = System.DateTime.UtcNow - job.CreatedAtUtc;
+            var elapsed = DateTime.UtcNow - job.CreatedAtUtc;
             totalTimeField.text = FormatTimeSpan(elapsed);
         }
 
-        // Animated progress bar and spinner pulse
+        if (stopButton != null)
+        {
+            bool isActiveSession = !string.IsNullOrEmpty(activeRunningJobId) && job.JobId == activeRunningJobId;
+            stopButton.text = isActiveSession ? "Cancel" : "Dismiss";
+            stopButton.tooltip = isActiveSession
+                ? "Request cancellation of the workflow run in this editor session."
+                : "Remove this job from Running (editor is not executing it; likely stale after restart). Server-side work may continue.";
+            if (onStopJob != null)
+                stopButton.clicked += () => onStopJob(job);
+            else
+                stopButton.SetEnabled(false);
+        }
+
         if (job.Status == JobStatus.Running)
         {
             float v = 0f;
@@ -109,12 +133,10 @@ public class RunningJobsView
                     return;
                 }
 
-                // Animate progress bar
                 v = (v + 2f) % 100f;
                 if (progressBar != null)
                     progressBar.value = v;
 
-                // Pulse the spinner opacity
                 pulse = (pulse + 0.05f) % (2f * Mathf.PI);
                 if (spinner != null)
                 {
@@ -122,17 +144,13 @@ public class RunningJobsView
                     spinner.style.opacity = alpha;
                 }
 
-                // Update elapsed time
-                var elapsed = System.DateTime.UtcNow - startTime;
+                var elapsed = DateTime.UtcNow - startTime;
                 if (totalTimeField != null)
                     totalTimeField.text = FormatTimeSpan(elapsed);
 
             }).Every(50);
 
-            row.RegisterCallback<DetachFromPanelEvent>(evt =>
-            {
-                scheduledItem?.Pause();
-            });
+            row.RegisterCallback<DetachFromPanelEvent>(_ => { scheduledItem?.Pause(); });
         }
         else if (progressBar != null)
         {
@@ -142,7 +160,7 @@ public class RunningJobsView
         return row;
     }
 
-    private string FormatTimeSpan(System.TimeSpan span)
+    private static string FormatTimeSpan(TimeSpan span)
     {
         if (span.TotalHours >= 1.0)
         {
@@ -152,5 +170,4 @@ public class RunningJobsView
 
         return string.Format("{0:00}:{1:00}", span.Minutes, span.Seconds);
     }
-
 }

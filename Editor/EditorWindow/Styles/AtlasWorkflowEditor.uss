@@ -30,8 +30,7 @@
 }
 
 #run-workflow-button {
-    margin: 8px;
-    margin-top: 4px;
+    margin: 4px 8px 4px 8px;
     height: 32px;
     font-size: 13px;
     -unity-font-style: bold;
@@ -194,4 +193,71 @@
     background-color: rgb(60, 60, 60);
     border-color: rgb(80, 80, 80);
     color: rgb(120, 120, 120);
+}
+
+/* ========================================
+   Main window: fill dock height; workflow scrolls
+   ======================================== */
+
+#main-container {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+/* Take remaining space below library; min-height:0 lets flex shrink so inner ScrollView gets a cap */
+.current-workflow-panel {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.current-workflow-body {
+    flex-grow: 1;
+    min-height: 0;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.job-view-host {
+    flex-grow: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 5px;
+}
+
+.workflow-actions-row {
+    flex-shrink: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.workflow-actions-spacer {
+    flex-grow: 1;
+    min-width: 8px;
+}
+
+/* ID + class: win over editor theme defaults on unity-button */
+.open-workflow-jobs-button,
+#open-workflow-jobs-button {
+    height: 32px;
+    min-width: 140px;
+    margin: 4px 8px 4px 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    background-color: rgb(70, 70, 70);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(95, 95, 95);
+    color: rgb(220, 220, 220);
+    flex-shrink: 0;
+}
+
+.open-workflow-jobs-button:hover,
+#open-workflow-jobs-button:hover {
+    background-color: rgb(85, 85, 85);
+    border-color: rgb(110, 110, 110);
+    color: white;
 }

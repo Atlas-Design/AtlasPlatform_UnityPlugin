@@ -1,0 +1,61 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/AtlasWorkflowEditor.uss?fileID=7433441132597879392&amp;guid=f7fba480d79272445a15f031bc6895be&amp;type=3#AtlasWorkflowEditor" />
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_ParamStyles.uss?fileID=7433441132597879392&amp;guid=137bd3f6517b35648a6975ef73eb63d3&amp;type=3#_ParamStyles" />
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/WorkflowBatchEditor.uss?fileID=7433441132597879392&amp;guid=b2c3d4e5f6a7889900bbccddeeff1234&amp;type=3#WorkflowBatchEditor" />
+    <Style src="project://database/Packages/com.atlas.workflow/Editor/EditorWindow/Styles/_WorkflowJobView.uss?fileID=7433441132597879392&amp;guid=651450396d11c3f4bb26a4a9c5541b56&amp;type=3#_WorkflowJobView" />
+    <ui:VisualElement name="batch-editor-root" class="batch-editor-root">
+        <ui:ScrollView name="batch-editor-scroll" class="batch-editor-scroll">
+            <ui:VisualElement class="batch-scroll-content">
+                <ui:VisualElement class="section-box primary-panel batch-library-section">
+                    <ui:VisualElement class="panel-header">
+                        <ui:Label text="Workflow Library" class="panel-header__title primary-panel__title" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="panel-body library-body">
+                        <ui:VisualElement name="batch-workflow-picker-host" class="batch-workflow-picker-host" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="section-box primary-panel batch-section-spaced">
+                    <ui:VisualElement class="panel-header">
+                        <ui:Label text="Selected Workflow" class="panel-header__title primary-panel__title" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="panel-body current-workflow-body">
+                        <ui:VisualElement name="batch-selected-workflow-host" class="batch-selected-workflow-host" style="display: none;">
+                            <ui:VisualElement name="batch-active-workflow-strip" class="batch-active-workflow-strip" style="display: none; flex-direction: column;">
+                                <ui:VisualElement class="workflow-header">
+                                    <ui:VisualElement class="workflow-header__left">
+                                        <ui:VisualElement name="batch-workflow-status-dot" class="workflow-status-dot" />
+                                        <ui:VisualElement class="workflow-header__text">
+                                            <ui:Label name="batch-workflow-name-label" class="workflow-name" text=" " />
+                                            <ui:Label name="batch-workflow-subtitle-label" class="workflow-subtitle" text=" " />
+                                        </ui:VisualElement>
+                                    </ui:VisualElement>
+                                    <ui:Label name="batch-workflow-strip-status" class="status-label" text="Ready" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="batch-rows-host" class="batch-rows-host" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="section-box primary-panel batch-section-spaced">
+                    <ui:VisualElement class="panel-header">
+                        <ui:Label text="Run settings" class="panel-header__title primary-panel__title" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="panel-body">
+                        <ui:VisualElement name="batch-settings-host" class="batch-settings-host" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:Label name="batch-status-label" class="batch-status-label" text=" " />
+            </ui:VisualElement>
+        </ui:ScrollView>
+
+        <ui:VisualElement class="batch-editor-footer">
+            <ui:Button name="batch-open-workflow-jobs-button" text="Open Job History" class="batch-open-workflow-jobs-button" tooltip="Open Atlas Job History (running jobs and past runs)" />
+            <ui:VisualElement class="batch-editor-footer-spacer" />
+            <ui:Button name="batch-cancel-run-button" text="Cancel batch" class="batch-cancel-run-button" />
+            <ui:Button name="batch-run-button" text="Run batch" class="batch-run-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -18,6 +18,12 @@ public class AtlasSettingsProvider : SettingsProvider
         return new AtlasSettingsProvider("Project/Atlas Workflow", SettingsScope.Project);
     }
 
+    [MenuItem("Atlas/Atlas Workflow Settings", false, 30)]
+    public static void OpenFromAtlasMenu()
+    {
+        SettingsService.OpenProjectSettings("Project/Atlas Workflow");
+    }
+
     public override void OnActivate(string searchContext, VisualElement rootElement)
     {
         _rootElement = rootElement;
