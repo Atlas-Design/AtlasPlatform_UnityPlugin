@@ -12,34 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 966a259038b9d36479bb27e0bccf5c0a, type: 3}
   m_Name: AtlasWorkflowState
   m_EditorClassIdentifier: 
-  ActiveApiId: 74ff4c21-0c57-49e4-93df-a4a6a3b8df96
-  ActiveName: INT-AudioTest-API-v000
+  ActiveApiId: 41621847-dd06-4c22-910c-103e3129f27a
+  ActiveName: DP-Parallel-IMGto3D-API-v008
   BaseUrl: https://api.prod.atlas.design
   Version: 0.1
   Inputs:
-  - ParamId: input_text
-    Label: input_text
-    ParamType: 2
+  - ParamId: input_image
+    Label: input_image
+    ParamType: 3
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
-    StringValue: And this is a different one
-    ImageValue: {fileID: 0}
+    StringValue: 
+    ImageValue: {fileID: 2800000, guid: 546560685327e4d458b37de490e22f0e, type: 3}
     MeshValue: {fileID: 0}
     FilePath: 
     Format: 
   Outputs:
-  - ParamId: output_audio
-    Label: output_audio
-    ParamType: 5
+  - ParamId: output_mesh
+    Label: output_mesh
+    ParamType: 4
     SourceType: 0
     BoolValue: 0
     NumberValue: 0
     StringValue: 
     ImageValue: {fileID: 0}
     MeshValue: {fileID: 0}
-    FilePath: C:\Users\atlas\AppData\Local\Temp\UnityAtlasWorkflow\output_audio_bc07aa0a-5ad4-4c0e-a0a2-c160ae8cab4d.mp3
-    Format: mp3
+    FilePath: C:\Users\atlas\AppData\Local\Temp\UnityAtlasWorkflow\output_mesh_863c27ab-4419-4c56-bd02-68db5b8db89c.glb
+    Format: glb
   IsJobRunning: 0
   JobStatus: 
   JobProgress: 0

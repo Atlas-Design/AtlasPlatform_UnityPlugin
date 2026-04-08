@@ -688,6 +688,20 @@ namespace Atlas.Workflow
 
         private static void EnsureFolderExists(string path)
         {
+            path = path.Replace('\\', '/');
+            if (!path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+                path = AtlasAssetPathUtilities.NormalizeToAssetsRelative(path);
+
+            try
+            {
+                Directory.CreateDirectory(AtlasAssetPathUtilities.AssetPathToAbsolute(path));
+            }
+            catch (Exception ex)
+            {
+                AtlasLogger.LogError($"[GLBImporter] Could not create output folder on disk: {path} — {ex.Message}");
+                return;
+            }
+
             if (AssetDatabase.IsValidFolder(path))
                 return;
 

@@ -1,8 +1,9 @@
 // In Packages/com.atlas.workflow/Editor/Logic/SettingsManager.cs
 
+using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
-using System.IO;
 
 public static class SettingsManager
 {
@@ -46,12 +47,24 @@ public static class SettingsManager
     public static string GetSavePath()
     {
         string path = EditorPrefs.GetString(SavePathKey, DefaultSavePath);
+        path = path.Replace('\\', '/').TrimEnd('/');
 
-        // Ensure the directory exists
-        if (!Directory.Exists(path))
+        // EditorPrefs is machine-wide: migrate absolute path under *this* project's Assets to Assets/...
+        string data = Application.dataPath.Replace('\\', '/');
+        if (path.StartsWith(data, StringComparison.OrdinalIgnoreCase))
         {
-            Directory.CreateDirectory(path);
+            string rest = path.Substring(data.Length).TrimStart('/');
+            path = string.IsNullOrEmpty(rest) ? "Assets" : "Assets/" + rest;
+            EditorPrefs.SetString(SavePathKey, path);
         }
+
+        // Ensure the directory exists on disk (project-relative under cwd)
+        string abs = Path.GetFullPath(Path.Combine(Application.dataPath, path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
+            ? path.Substring(7).Replace('/', Path.DirectorySeparatorChar)
+            : path.Replace('/', Path.DirectorySeparatorChar)));
+        if (!Directory.Exists(abs))
+            Directory.CreateDirectory(abs);
+
         return path;
     }
 

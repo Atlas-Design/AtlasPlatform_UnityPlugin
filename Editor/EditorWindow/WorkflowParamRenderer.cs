@@ -730,29 +730,27 @@ public class WorkflowParamRenderer
 
         try
         {
-            // Ensure folder exists
-            EnsureFolderExists(folder);
-
-            // Determine output path
+            // Determine output path (must be Assets-relative; see AtlasAssetPathUtilities)
             string sanitizedName = SanitizeFolderName(paramId);
             string extension = Path.GetExtension(sourcePath).ToLower();
             if (string.IsNullOrEmpty(extension))
                 extension = ".png";
-            
-            string destPath = $"{folder}/{sanitizedName}{extension}";
 
-            // Copy file
-            File.Copy(sourcePath, destPath, overwrite: true);
-            
-            // Import to AssetDatabase
-            AssetDatabase.ImportAsset(destPath, ImportAssetOptions.ForceSynchronousImport);
+            string destAssetPath = $"{folder}/{sanitizedName}{extension}".Replace('\\', '/');
+            destAssetPath = AtlasAssetPathUtilities.NormalizeToAssetsRelative(destAssetPath);
+            AtlasAssetPathUtilities.EnsureParentDirectoryExistsOnDisk(destAssetPath);
+
+            string absDest = AtlasAssetPathUtilities.AssetPathToAbsolute(destAssetPath);
+            File.Copy(sourcePath, absDest, overwrite: true);
+
+            AssetDatabase.ImportAsset(destAssetPath, ImportAssetOptions.ForceSynchronousImport);
             
             // Load the imported texture
-            Texture2D importedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(destPath);
+            Texture2D importedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(destAssetPath);
             
             if (importedTex != null)
             {
-                Debug.Log($"[Atlas] Successfully imported image: {destPath}");
+                Debug.Log($"[Atlas] Successfully imported image: {destAssetPath}");
                 
                 if (assetField != null)
                 {
@@ -763,7 +761,7 @@ public class WorkflowParamRenderer
             }
             else
             {
-                Debug.LogError($"[Atlas] Failed to load imported image: {destPath}");
+                Debug.LogError($"[Atlas] Failed to load imported image: {destAssetPath}");
             }
         }
         catch (Exception ex)
@@ -787,8 +785,6 @@ public class WorkflowParamRenderer
 
         try
         {
-            EnsureFolderExists(folder);
-
             string sanitizedName = SanitizeFolderName(paramId);
             string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
             if (string.IsNullOrEmpty(extension))
@@ -797,21 +793,24 @@ public class WorkflowParamRenderer
                 extension = string.IsNullOrEmpty(fmt) ? ".mp3" : "." + fmt;
             }
 
-            string destPath = $"{folder}/{sanitizedName}{extension}";
+            string destAssetPath = $"{folder}/{sanitizedName}{extension}".Replace('\\', '/');
+            destAssetPath = AtlasAssetPathUtilities.NormalizeToAssetsRelative(destAssetPath);
+            AtlasAssetPathUtilities.EnsureParentDirectoryExistsOnDisk(destAssetPath);
 
-            File.Copy(sourcePath, destPath, overwrite: true);
-            AssetDatabase.ImportAsset(destPath, ImportAssetOptions.ForceSynchronousImport);
+            string absDest = AtlasAssetPathUtilities.AssetPathToAbsolute(destAssetPath);
+            File.Copy(sourcePath, absDest, overwrite: true);
+            AssetDatabase.ImportAsset(destAssetPath, ImportAssetOptions.ForceSynchronousImport);
 
-            var imported = AssetDatabase.LoadAssetAtPath<AudioClip>(destPath);
+            var imported = AssetDatabase.LoadAssetAtPath<AudioClip>(destAssetPath);
             if (imported != null)
             {
                 if (assetField != null)
                     assetField.value = imported;
                 EditorGUIUtility.PingObject(imported);
-                AtlasLogger.Log($"Imported audio clip: {destPath}");
+                AtlasLogger.Log($"Imported audio clip: {destAssetPath}");
             }
             else
-                AtlasLogger.LogError($"[Atlas] Failed to load imported audio as AudioClip: {destPath}");
+                AtlasLogger.LogError($"[Atlas] Failed to load imported audio as AudioClip: {destAssetPath}");
         }
         catch (Exception ex)
         {
@@ -819,25 +818,6 @@ public class WorkflowParamRenderer
         }
     }
 
-    /// <summary>
-    /// Ensures an asset folder exists, creating it recursively if needed.
-    /// </summary>
-    private static void EnsureFolderExists(string path)
-    {
-        if (AssetDatabase.IsValidFolder(path))
-            return;
-
-        string parent = Path.GetDirectoryName(path)?.Replace("\\", "/");
-        string folderName = Path.GetFileName(path);
-
-        if (string.IsNullOrEmpty(parent))
-            parent = "Assets";
-
-        if (!AssetDatabase.IsValidFolder(parent))
-            EnsureFolderExists(parent);
-
-        AssetDatabase.CreateFolder(parent, folderName);
-    }
     private VisualElement CreateMeshOutput(AtlasWorkflowParamState outputState, bool editable)
     {
         var root = meshOut.CloneTree();
