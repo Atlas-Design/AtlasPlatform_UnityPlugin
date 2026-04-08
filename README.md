@@ -16,7 +16,9 @@
 </p>
 
 <p align="center">
-  <a href="#-what-you-can-do">What you can do</a> •
+  <a href="#-atlas-workflow-single-run">Single run</a> •
+  <a href="#-atlas-batch">Batch</a> •
+  <a href="#-atlas-job-history">Job history</a> •
   <a href="#-installation">Installation</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-settings">Settings</a> •
@@ -45,25 +47,112 @@ You stay inside familiar Unity menus and windows — the plugin handles talking 
 
 ---
 
-## 📸 Screenshots
+## 🪟 Atlas Workflow (single run)
+
+**Menu:** **Atlas → Atlas Workflow**
+
+This window is for **one workflow at a time**: pick what to run, fill in inputs, see outputs, and start a single run.
+
+### Main areas
+
+| Area | What it’s for |
+|------|----------------|
+| **Workflow Library** | **Dropdown** — switch between workflows you’ve already imported. **Import** — add a new workflow from a `.json` file your team shared. **✕** — remove the selected workflow from the library (does not delete the file on disk). |
+| **Selected Workflow** | Shows the **name and details** of the current workflow, then **Inputs** (everything you must set before running), then **Outputs** (what you’ll get back — previews and paths fill in after a successful run). |
+| Bottom row | **Open Job History** — jumps to **Atlas → Atlas Job History** to watch runs or browse the past. **▶ Run …** — starts one execution using the values you entered (the button label includes the workflow name). |
+
+### Typical flow
+
+1. **Import** a workflow once, or pick an existing one in the dropdown.  
+2. Set each input (textures/models from the project or **Browse** to a file on disk; toggles, numbers, and text as shown).  
+3. Press **▶ Run …** and wait for the platform to finish.  
+4. Use the output rows to **import** assets into the project or **reveal** files on disk when those actions appear.
 
 <p align="center">
-  <img src="Docs~/Images/EditorWindow.png" alt="Main workflow window" width="80%"/>
+  <img src="Docs~/Images/EditorWindow.png" alt="Atlas Workflow window with Workflow Library and Selected Workflow" width="85%"/>
   <br/>
-  <em>Main window — workflows, inputs, and run</em>
+  <em>Atlas Workflow — library at the top, selected workflow with inputs/outputs below</em>
 </p>
 
-<p align="center">
-  <img src="Docs~/Images/JobHistory.png" alt="Job history" width="80%"/>
-  <br/>
-  <em>Browse and reopen past runs</em>
-</p>
+> **Image polish (optional):** Replace or supplement with `Docs~/Images/EditorWindow_Annotated.png` — same window with subtle callouts or numbered labels for **Workflow Library**, **Selected Workflow**, **Open Job History**, and **Run** (sample content only, no secrets).
+
+---
+
+## 📋 Atlas Batch
+
+**Menu:** **Atlas → Atlas Batch**  
+**Window title:** **Atlas Batch**
+
+Use this when you need the **same workflow many times** with **different inputs per row** (for example many variants or a small overnight queue). Each row becomes its **own saved run** in job history, grouped so you can review them together later.
+
+### Main areas
+
+| Area | What it’s for |
+|------|----------------|
+| **Workflow Library** | Same idea as the single-run window: **Import**, **dropdown**, and **✕** to manage which workflows exist in your library. |
+| **Selected Workflow** | After you choose a workflow, this shows its **name** and a **read-only summary** of what inputs the batch will use. Below that, **one block per row** — each row is one full set of inputs for that workflow. Use **+ Add row**, **Duplicate**, **Remove**, **↑** / **↓** to build your queue. **Save batch…** / **Load batch…** store or restore a draft (your workflow must still be in the library when you load). |
+| **Run settings** | Controls how the batch runs, such as **how many jobs at once** and **how many times to retry** when a run fails for a temporary reason (for example a network blip). Exact labels match the fields in the window. |
+| Bottom bar | **Open Job History** — same as in the single-run window. **Run batch** — start every row. **Cancel batch** — stop adding new runs and cancel in-flight work from *this* batch (this is different from **Dismiss** on a card in the Job History window). |
+
+### Typical flow
+
+1. Import or select a workflow.  
+2. Add rows and fill each row’s inputs.  
+3. Adjust **Run settings** if your team recommends it.  
+4. **Run batch** — follow progress in **Atlas → Atlas Job History**.  
+5. **Save batch…** if you want to reuse the same queue later.
+
+> **Screenshot to add / clarify:** `Docs~/Images/WorkflowBatchEditor.png` — Full **Atlas Batch** window: **Workflow Library**, **Selected Workflow** with **at least two rows** visible, **Run settings**, and footer with **Open Job History**, **Cancel batch**, **Run batch**. Use a friendly sample workflow and non-sensitive assets. Prefer good lighting, consistent editor theme, and enough window height to show the scroll area.
+
+> **Extra (optional):** `Docs~/Images/WorkflowBatchEditor_RunSettings.png` — Tighter crop on **Run settings** only, if you document those fields in more detail later.
+
+---
+
+## 📚 Atlas Job History
+
+**Menu:** **Atlas → Atlas Job History**  
+**Window title:** **Atlas Job History**
+
+This is the **mission control** view: everything **currently running** plus the **archive of past runs**. You can leave it open while you work in the single-run or batch windows.
+
+### Main areas
+
+| Area | What it’s for |
+|------|----------------|
+| **Running Jobs** | A scrollable list of **active** (and very recent) runs. Each **card** shows status and shortcuts — for example **Cancel** when this window is tied to a single run you started from **Atlas Workflow**, or **Dismiss** to hide a card you don’t need to watch (often used for batch jobs). Hover tooltips may mention **batch** position when a run came from **Atlas Batch**. |
+| **Jobs History** | The lower (or main) area lists **finished and past runs**. Pick a row to see **inputs and outputs** for that run on the side (read-only snapshot of what was sent and returned). Use the **⋮** menu on the header if your build exposes extra actions (for example refresh or maintenance). |
+| **Jobs** / **Batches** | At the top of the history toolbar: **Jobs** — one entry **per run** (every single and batch job). **Batches** — one entry **per batch**, then open a batch to see **only** the runs that belonged to it; **← Batches** returns to the batch list. |
+| **Status**, **Type**, **Date** | Filters for the list. Hover the filters for short explanations — some options behave differently in **Jobs** vs **Batches** mode (tooltips in the editor describe this). |
+
+### When to use which mode
+
+- **Jobs** — “Show me everything” or find one specific run quickly.  
+- **Batches** — “I ran a batch yesterday — how did the whole group do?”
 
 <p align="center">
-  <img src="Docs~/Images/Settings.png" alt="Settings" width="80%"/>
+  <img src="Docs~/Images/JobHistory.png" alt="Jobs History list with a run selected and detail beside it" width="85%"/>
   <br/>
-  <em>Project settings — where saves go and how long to wait</em>
+  <em>Jobs History — list and detail (existing asset; good for <strong>Jobs</strong> mode until a full-window capture replaces it)</em>
 </p>
+
+> **Screenshot to add / clarify:** `Docs~/Images/AtlasJobHistoryWindow.png` — Full window showing **Running Jobs** (even one sample card) and **Jobs History** with the **Jobs \| Batches** toggle and **Status / Type / Date** filters visible. Same theme as other screenshots; no API keys or private paths in frame.
+
+> **Screenshot to add / clarify:** `Docs~/Images/JobHistoryBatchesMode.png` — **Batches** selected: either the **batch catalog** list or **drill-in** with **← Batches** visible so readers see navigation. Include at least one batch row with clear status/counts if your data allows (or anonymized samples).
+
+---
+
+## 📷 Documentation images checklist
+
+For whoever prepares screenshots: use **one consistent Unity theme**, **non-sensitive** sample workflows, and save PNGs under `Docs~/Images/`. When a file exists, add a normal `<img>` in the matching section above and **remove** the corresponding “Screenshot to add” blockquote.
+
+| File | Purpose |
+|------|---------|
+| `WorkflowBatchEditor.png` | Full **Atlas Batch** window (see [Atlas Batch](#-atlas-batch)). |
+| `AtlasJobHistoryWindow.png` | **Running Jobs** + **Jobs History** + **Jobs \| Batches** + filters ([Atlas Job History](#-atlas-job-history)). |
+| `JobHistoryBatchesMode.png` | **Batches** mode: catalog or drill-in with **← Batches**. |
+| `EditorWindow_Annotated.png` | Optional callouts on single-run window. |
+| `WorkflowBatchEditor_RunSettings.png` | Optional crop of **Run settings**. |
+| `Settings_KeyFields.png` | Optional crop of **Asset Save Folder** + **API Timeout**. |
 
 ---
 
@@ -96,6 +185,8 @@ On newer Unity versions, an **Atlas** entry may also appear on the main toolbar 
 
 ## 🏃 Quick Start
 
+The three windows above (**Atlas Workflow**, **Atlas Batch**, **Atlas Job History**) are where you spend your time; these steps are the shortest path to a first successful run.
+
 1. Open **Atlas → Atlas Workflow**.
 2. Open **Atlas → Atlas Workflow Settings** and set **Asset Save Folder** (must be under `Assets/`) and **API Timeout** if you need longer runs.
 3. Click **Import** and choose the **workflow file** (.json) your team gave you. It appears in the library dropdown.
@@ -109,7 +200,15 @@ On newer Unity versions, an **Atlas** entry may also appear on the main toolbar 
 
 ## ⚙️ Settings
 
-Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → Project → Atlas Workflow**).
+Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → Project → Atlas Workflow**). These options apply to **all** workflow and batch runs, not just one window.
+
+<p align="center">
+  <img src="Docs~/Images/Settings.png" alt="Atlas Workflow project settings" width="85%"/>
+  <br/>
+  <em>Atlas Workflow Settings — save folder, timeouts, notifications</em>
+</p>
+
+> **Image polish (optional):** `Docs~/Images/Settings_KeyFields.png` — Crop highlighting **Asset Save Folder** and **API Timeout** for newcomers.
 
 | What | Why it matters |
 |------|----------------|
