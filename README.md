@@ -74,7 +74,7 @@ This window is for **one workflow at a time**: pick what to run, fill in inputs,
   <em>Atlas Workflow — library at the top, selected workflow with inputs/outputs below</em>
 </p>
 
-> **Image polish (optional):** Replace or supplement with `Docs~/Images/EditorWindow_Annotated.png` — same window with subtle callouts or numbered labels for **Workflow Library**, **Selected Workflow**, **Open Job History**, and **Run** (sample content only, no secrets).
+Optional: add `Docs~/Images/EditorWindow_Annotated.png` (callouts for **Workflow Library**, **Selected Workflow**, **Open Job History**, **Run**) if you want a labeled variant — file not in the repo yet.
 
 ---
 
@@ -102,9 +102,17 @@ Use this when you need the **same workflow many times** with **different inputs 
 4. **Run batch** — follow progress in **Atlas → Atlas Job History**.  
 5. **Save batch…** if you want to reuse the same queue later.
 
-> **Screenshot to add / clarify:** `Docs~/Images/WorkflowBatchEditor.png` — Full **Atlas Batch** window: **Workflow Library**, **Selected Workflow** with **at least two rows** visible, **Run settings**, and footer with **Open Job History**, **Cancel batch**, **Run batch**. Use a friendly sample workflow and non-sensitive assets. Prefer good lighting, consistent editor theme, and enough window height to show the scroll area.
+<p align="center">
+  <img src="Docs~/Images/WorkflowBatchEditor.png" alt="Atlas Batch window with library, rows, run settings, and footer actions" width="85%"/>
+  <br/>
+  <em>Atlas Batch — library, row queue, run settings, and <strong>Run batch</strong> / <strong>Cancel batch</strong></em>
+</p>
 
-> **Extra (optional):** `Docs~/Images/WorkflowBatchEditor_RunSettings.png` — Tighter crop on **Run settings** only, if you document those fields in more detail later.
+<p align="center">
+  <img src="Docs~/Images/WorkflowBatchEditor_RunSettings.png" alt="Atlas Batch Run settings section" width="70%"/>
+  <br/>
+  <em><strong>Run settings</strong> — how many jobs run at once and retry limits (labels match the live UI)</em>
+</p>
 
 ---
 
@@ -130,29 +138,32 @@ This is the **mission control** view: everything **currently running** plus the 
 - **Batches** — “I ran a batch yesterday — how did the whole group do?”
 
 <p align="center">
-  <img src="Docs~/Images/JobHistory.png" alt="Jobs History list with a run selected and detail beside it" width="85%"/>
+  <img src="Docs~/Images/AtlasJobHistoryWindow.png" alt="Atlas Job History window with Running Jobs, Jobs History, and filters" width="85%"/>
   <br/>
-  <em>Jobs History — list and detail (existing asset; good for <strong>Jobs</strong> mode until a full-window capture replaces it)</em>
+  <em><strong>Atlas Job History</strong> — Running Jobs, Jobs History, Jobs | Batches, and Status / Type / Date filters</em>
 </p>
 
-> **Screenshot to add / clarify:** `Docs~/Images/AtlasJobHistoryWindow.png` — Full window showing **Running Jobs** (even one sample card) and **Jobs History** with the **Jobs \| Batches** toggle and **Status / Type / Date** filters visible. Same theme as other screenshots; no API keys or private paths in frame.
+<p align="center">
+  <img src="Docs~/Images/JobHistoryBatchesMode.png" alt="Jobs History in Batches mode with batch list or drill-in" width="85%"/>
+  <br/>
+  <em><strong>Batches</strong> mode — catalog or drill-in; use <strong>← Batches</strong> to go back to the batch list</em>
+</p>
 
-> **Screenshot to add / clarify:** `Docs~/Images/JobHistoryBatchesMode.png` — **Batches** selected: either the **batch catalog** list or **drill-in** with **← Batches** visible so readers see navigation. Include at least one batch row with clear status/counts if your data allows (or anonymized samples).
+<p align="center">
+  <img src="Docs~/Images/JobHistory.png" alt="Jobs History list with one run selected and detail panel" width="85%"/>
+  <br/>
+  <em><strong>Jobs</strong> mode — select a run in the list to inspect inputs and outputs in the detail pane</em>
+</p>
 
 ---
 
-## 📷 Documentation images checklist
+## 📷 Documentation images (optional)
 
-For whoever prepares screenshots: use **one consistent Unity theme**, **non-sensitive** sample workflows, and save PNGs under `Docs~/Images/`. When a file exists, add a normal `<img>` in the matching section above and **remove** the corresponding “Screenshot to add” blockquote.
+| File | Status |
+|------|--------|
+| `EditorWindow_Annotated.png` | Not added yet — optional callout version of the single-run window ([Atlas Workflow](#-atlas-workflow-single-run)). |
 
-| File | Purpose |
-|------|---------|
-| `WorkflowBatchEditor.png` | Full **Atlas Batch** window (see [Atlas Batch](#-atlas-batch)). |
-| `AtlasJobHistoryWindow.png` | **Running Jobs** + **Jobs History** + **Jobs \| Batches** + filters ([Atlas Job History](#-atlas-job-history)). |
-| `JobHistoryBatchesMode.png` | **Batches** mode: catalog or drill-in with **← Batches**. |
-| `EditorWindow_Annotated.png` | Optional callouts on single-run window. |
-| `WorkflowBatchEditor_RunSettings.png` | Optional crop of **Run settings**. |
-| `Settings_KeyFields.png` | Optional crop of **Asset Save Folder** + **API Timeout**. |
+All other images referenced in this README are present under `Docs~/Images/`.
 
 ---
 
@@ -205,10 +216,14 @@ Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → P
 <p align="center">
   <img src="Docs~/Images/Settings.png" alt="Atlas Workflow project settings" width="85%"/>
   <br/>
-  <em>Atlas Workflow Settings — save folder, timeouts, notifications</em>
+  <em>Atlas Workflow Settings — full project settings view</em>
 </p>
 
-> **Image polish (optional):** `Docs~/Images/Settings_KeyFields.png` — Crop highlighting **Asset Save Folder** and **API Timeout** for newcomers.
+<p align="center">
+  <img src="Docs~/Images/Settings_KeyFields.png" alt="Asset Save Folder and API Timeout in Atlas Workflow settings" width="85%"/>
+  <br/>
+  <em>Key fields — <strong>Asset Save Folder</strong> and <strong>API Timeout</strong></em>
+</p>
 
 | What | Why it matters |
 |------|----------------|
