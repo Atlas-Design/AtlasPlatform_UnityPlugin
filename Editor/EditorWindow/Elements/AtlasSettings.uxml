@@ -13,6 +13,24 @@
         <!-- SEPARATOR -->
         <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
 
+        <!-- AUTHENTICATION -->
+        <ui:Label text="Authentication" style="-unity-font-style: bold; margin-bottom: 4px;" />
+
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Workspace API Key" style="min-width: 180px; flex-shrink: 0;" />
+            <ui:TextField name="workspace-api-key-field" style="flex-grow: 1;" />
+        </ui:VisualElement>
+        <ui:Label text="Create in Atlas → Workspace settings → API Keys (atk_...)." style="font-size: 10px; color: rgb(150, 150, 150); margin-left: 180px; margin-bottom: 4px;" />
+
+        <ui:VisualElement style="flex-direction: row; margin: 4px 0; align-items: center;">
+            <ui:Label text="Read Key from Environment" style="min-width: 180px;" />
+            <ui:Toggle name="read-api-key-env-toggle" value="true" />
+        </ui:VisualElement>
+        <ui:Label text="Uses ATLAS_API_KEY or API_KEY when the field above is empty." style="font-size: 10px; color: rgb(150, 150, 150); margin-left: 180px; margin-bottom: 4px;" />
+
+        <!-- SEPARATOR -->
+        <ui:VisualElement style="height: 1px; background-color: rgb(40, 40, 40); margin: 12px 0;" />
+
         <!-- API SETTINGS -->
         <ui:Label text="API Settings" style="-unity-font-style: bold; margin-bottom: 4px;" />
         

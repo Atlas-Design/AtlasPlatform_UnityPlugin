@@ -34,22 +34,40 @@ public static class AtlasAPIController
         return new CancellationTokenSource(timeout.Value);
     }
 
-    /// <summary>
-    /// Sends a POST request with the configured timeout.
-    /// </summary>
-    private static async Task<HttpResponseMessage> PostWithTimeoutAsync(string url, HttpContent content)
+    private static async Task<HttpResponseMessage> SendWithTimeoutAsync(HttpRequestMessage request)
     {
+        AtlasPlatformAuth.ApplyAuthHeaders(request);
+
         using var cts = CreateTimeoutCancellation();
         var token = cts?.Token ?? CancellationToken.None;
 
         try
         {
-            return await client.PostAsync(url, content, token);
+            return await client.SendAsync(request, token);
         }
         catch (OperationCanceledException) when (cts != null && cts.IsCancellationRequested)
         {
-            throw new TimeoutException($"Request to {url} timed out after {SettingsManager.FormatTimeoutDisplay(SettingsManager.GetApiTimeoutMinutes())}.");
+            throw new TimeoutException(
+                $"Request to {request.RequestUri} timed out after {SettingsManager.FormatTimeoutDisplay(SettingsManager.GetApiTimeoutMinutes())}.");
         }
+    }
+
+    /// <summary>
+    /// Sends a POST request with the configured timeout.
+    /// Takes ownership of <paramref name="content"/> (disposed with the request). Caller owns the response.
+    /// </summary>
+    private static async Task<HttpResponseMessage> PostWithTimeoutAsync(string url, HttpContent content)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+        return await SendWithTimeoutAsync(request);
+    }
+
+    private static async Task<string> ReadResponseBodyAsync(HttpResponseMessage response)
+    {
+        if (response?.Content == null)
+            return string.Empty;
+
+        return await response.Content.ReadAsStringAsync();
     }
 
     /// <summary>
@@ -57,19 +75,10 @@ public static class AtlasAPIController
     /// </summary>
     private static async Task<byte[]> GetBytesWithTimeoutAsync(string url)
     {
-        using var cts = CreateTimeoutCancellation();
-        var token = cts?.Token ?? CancellationToken.None;
-
-        try
-        {
-            var response = await client.GetAsync(url, token);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync();
-        }
-        catch (OperationCanceledException) when (cts != null && cts.IsCancellationRequested)
-        {
-            throw new TimeoutException($"Download from {url} timed out after {SettingsManager.FormatTimeoutDisplay(SettingsManager.GetApiTimeoutMinutes())}.");
-        }
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await SendWithTimeoutAsync(request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync();
     }
 
     /// <summary>
@@ -77,19 +86,17 @@ public static class AtlasAPIController
     /// </summary>
     private static async Task<string> GetStringWithTimeoutAsync(string url)
     {
-        using var cts = CreateTimeoutCancellation();
-        var token = cts?.Token ?? CancellationToken.None;
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await SendWithTimeoutAsync(request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
+    }
 
-        try
-        {
-            var response = await client.GetAsync(url, token);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync();
-        }
-        catch (OperationCanceledException) when (cts != null && cts.IsCancellationRequested)
-        {
-            throw new TimeoutException($"GET request to {url} timed out after {SettingsManager.FormatTimeoutDisplay(SettingsManager.GetApiTimeoutMinutes())}.");
-        }
+    private static string FormatApiError(HttpResponseMessage response, string body, string fallback)
+    {
+        int statusCode = (int)response.StatusCode;
+        string detail = string.IsNullOrWhiteSpace(body) ? fallback : $"{fallback}\n{body}";
+        return AtlasPlatformAuth.FormatHttpFailure(statusCode, detail);
     }
 
     #region Async Polling API (New)
@@ -221,11 +228,13 @@ public static class AtlasAPIController
             return new SubmitResult { Success = false, ErrorMessage = "State is null." };
         }
 
-        string baseUrl = (state.BaseUrl ?? string.Empty).Trim().TrimEnd('/');
-        if (!baseUrl.StartsWith("http"))
+        if (!AtlasPlatformAuth.TryValidateForRun(state.Version, out string authError))
         {
-            baseUrl = $"https://{baseUrl}";
+            AtlasLogger.LogError(authError);
+            return new SubmitResult { Success = false, ErrorMessage = authError };
         }
+
+        string baseUrl = AtlasApiVersion.NormalizeBaseUrl(state.BaseUrl);
 
         var payload = new Dictionary<string, object>();
         var filesToUpload = new List<(string ParamId, string FilePath)>();
@@ -284,37 +293,38 @@ public static class AtlasAPIController
         }
 
         // --- 2. UPLOAD FILES ---
-        string uploadUrl = $"{baseUrl}/{state.Version}/upload/{state.ActiveApiId}";
+        string uploadUrl = AtlasApiVersion.BuildUploadUrl(baseUrl, state.Version, state.ActiveApiId);
         foreach (var (paramId, filePath) in filesToUpload)
         {
             AtlasLogger.LogAPI($"Uploading file for param '{paramId}' from path: {filePath}");
 
-            using (var form = new MultipartFormDataContent())
-            using (var fileContent = new ByteArrayContent(await File.ReadAllBytesAsync(filePath)))
+            var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(await File.ReadAllBytesAsync(filePath)), "file", Path.GetFileName(filePath));
+
+            using var uploadResponse = await PostWithTimeoutAsync(uploadUrl, form);
+            if (!uploadResponse.IsSuccessStatusCode)
             {
-                form.Add(fileContent, "file", Path.GetFileName(filePath));
-
-                HttpResponseMessage uploadResponse = await PostWithTimeoutAsync(uploadUrl, form);
-                if (!uploadResponse.IsSuccessStatusCode)
-                {
-                    string err = $"Failed to upload file for '{paramId}'. Status: {uploadResponse.StatusCode}";
-                    AtlasLogger.LogError(err);
-                    return new SubmitResult { Success = false, ErrorMessage = err };
-                }
-
-                string jsonResponse = await uploadResponse.Content.ReadAsStringAsync();
-                var responseData = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
-
-                if (responseData == null || !responseData.TryGetValue("file_id", out var fileId))
-                {
-                    string err = $"Upload response for '{paramId}' did not contain 'file_id'. Raw: {jsonResponse}";
-                    AtlasLogger.LogError(err);
-                    return new SubmitResult { Success = false, ErrorMessage = err };
-                }
-
-                payload[paramId] = fileId;
-                AtlasLogger.LogAPI($"Upload successful for '{paramId}'. File ID: {fileId}");
+                string body = await ReadResponseBodyAsync(uploadResponse);
+                string err = FormatApiError(
+                    uploadResponse,
+                    body,
+                    $"Failed to upload file for '{paramId}'. Status: {uploadResponse.StatusCode}");
+                AtlasLogger.LogError(err);
+                return new SubmitResult { Success = false, ErrorMessage = err };
             }
+
+            string jsonResponse = await ReadResponseBodyAsync(uploadResponse);
+            var responseData = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
+
+            if (responseData == null || !responseData.TryGetValue("file_id", out var fileId))
+            {
+                string err = $"Upload response for '{paramId}' did not contain 'file_id'. Raw: {jsonResponse}";
+                AtlasLogger.LogError(err);
+                return new SubmitResult { Success = false, ErrorMessage = err };
+            }
+
+            payload[paramId] = fileId;
+            AtlasLogger.LogAPI($"Upload successful for '{paramId}'. File ID: {fileId}");
         }
 
         // --- 3. SUBMIT TO ASYNC ENDPOINT ---
@@ -324,37 +334,38 @@ public static class AtlasAPIController
         AtlasLogger.LogAPI($"Submitting workflow at: {executeUrl}");
         AtlasLogger.LogAPI($"Payload:\n{payloadJson}");
 
-        using (var httpContent = new StringContent(payloadJson, System.Text.Encoding.UTF8, "application/json"))
+        var submitContent = new StringContent(payloadJson, System.Text.Encoding.UTF8, "application/json");
+        using var submitResponse = await PostWithTimeoutAsync(executeUrl, submitContent);
+        if (!submitResponse.IsSuccessStatusCode)
         {
-            HttpResponseMessage submitResponse = await PostWithTimeoutAsync(executeUrl, httpContent);
-            if (!submitResponse.IsSuccessStatusCode)
-            {
-                string body = await submitResponse.Content.ReadAsStringAsync();
-                string err = $"Workflow submission failed. Status: {submitResponse.StatusCode}\n{body}";
-                AtlasLogger.LogError(err);
-                return new SubmitResult { Success = false, ErrorMessage = err };
-            }
-
-            string responseJson = await submitResponse.Content.ReadAsStringAsync();
-            AtlasLogger.LogAPI($"Workflow submitted successfully. Response:\n{responseJson}");
-
-            var responseData = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseJson);
-            if (responseData == null || !responseData.TryGetValue("execution_id", out var execIdObj))
-            {
-                string err = $"Response does not contain 'execution_id' field. Raw: {responseJson}";
-                AtlasLogger.LogError(err);
-                return new SubmitResult { Success = false, ErrorMessage = err };
-            }
-
-            return new SubmitResult
-            {
-                Success = true,
-                ExecutionId = execIdObj.ToString(),
-                BaseUrl = baseUrl,
-                Version = state.Version,
-                ApiId = state.ActiveApiId
-            };
+            string body = await ReadResponseBodyAsync(submitResponse);
+            string err = FormatApiError(
+                submitResponse,
+                body,
+                $"Workflow submission failed. Status: {submitResponse.StatusCode}");
+            AtlasLogger.LogError(err);
+            return new SubmitResult { Success = false, ErrorMessage = err };
         }
+
+        string responseJson = await ReadResponseBodyAsync(submitResponse);
+        AtlasLogger.LogAPI($"Workflow submitted successfully. Response:\n{responseJson}");
+
+        var submitResponseData = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseJson);
+        if (submitResponseData == null || !submitResponseData.TryGetValue("execution_id", out var execIdObj))
+        {
+            string err = $"Response does not contain 'execution_id' field. Raw: {responseJson}";
+            AtlasLogger.LogError(err);
+            return new SubmitResult { Success = false, ErrorMessage = err };
+        }
+
+        return new SubmitResult
+        {
+            Success = true,
+            ExecutionId = execIdObj.ToString(),
+            BaseUrl = baseUrl,
+            Version = state.Version,
+            ApiId = state.ActiveApiId
+        };
     }
 
     /// <summary>
@@ -535,11 +546,13 @@ public static class AtlasAPIController
             return null;
         }
 
-        string baseUrl = (state.BaseUrl ?? string.Empty).Trim().TrimEnd('/');
-        if (!baseUrl.StartsWith("http"))
+        if (!AtlasPlatformAuth.TryValidateForRun(state.Version, out string authError))
         {
-            baseUrl = $"https://{baseUrl}";
+            AtlasLogger.LogError(authError);
+            return null;
         }
+
+        string baseUrl = AtlasApiVersion.NormalizeBaseUrl(state.BaseUrl);
 
         var payload = new Dictionary<string, object>();
         var filesToUpload = new List<(string ParamId, string FilePath)>();
@@ -599,35 +612,36 @@ public static class AtlasAPIController
         }
 
         // --- 2. UPLOAD FILES ---
-        string uploadUrl = $"{baseUrl}/{state.Version}/upload/{state.ActiveApiId}";
+        string uploadUrl = AtlasApiVersion.BuildUploadUrl(baseUrl, state.Version, state.ActiveApiId);
         foreach (var (paramId, filePath) in filesToUpload)
         {
             AtlasLogger.LogAPI($"Uploading file for param '{paramId}' from path: {filePath}");
 
-            using (var form = new MultipartFormDataContent())
-            using (var fileContent = new ByteArrayContent(await File.ReadAllBytesAsync(filePath)))
+            var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(await File.ReadAllBytesAsync(filePath)), "file", Path.GetFileName(filePath));
+
+            using var uploadResponse = await PostWithTimeoutAsync(uploadUrl, form);
+            if (!uploadResponse.IsSuccessStatusCode)
             {
-                form.Add(fileContent, "file", Path.GetFileName(filePath));
-
-                HttpResponseMessage uploadResponse = await PostWithTimeoutAsync(uploadUrl, form);
-                if (!uploadResponse.IsSuccessStatusCode)
-                {
-                    AtlasLogger.LogError($"Failed to upload file for '{paramId}'. Status: {uploadResponse.StatusCode}");
-                    return null;
-                }
-
-                string jsonResponse = await uploadResponse.Content.ReadAsStringAsync();
-                var responseData = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
-
-                if (responseData == null || !responseData.TryGetValue("file_id", out var fileId))
-                {
-                    AtlasLogger.LogError($"Upload response for '{paramId}' did not contain 'file_id'. Raw: {jsonResponse}");
-                    return null;
-                }
-
-                payload[paramId] = fileId;
-                AtlasLogger.LogAPI($"Upload successful for '{paramId}'. File ID: {fileId}");
+                string body = await ReadResponseBodyAsync(uploadResponse);
+                AtlasLogger.LogError(FormatApiError(
+                    uploadResponse,
+                    body,
+                    $"Failed to upload file for '{paramId}'. Status: {uploadResponse.StatusCode}"));
+                return null;
             }
+
+            string jsonResponse = await ReadResponseBodyAsync(uploadResponse);
+            var responseData = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
+
+            if (responseData == null || !responseData.TryGetValue("file_id", out var fileId))
+            {
+                AtlasLogger.LogError($"Upload response for '{paramId}' did not contain 'file_id'. Raw: {jsonResponse}");
+                return null;
+            }
+
+            payload[paramId] = fileId;
+            AtlasLogger.LogAPI($"Upload successful for '{paramId}'. File ID: {fileId}");
         }
 
         // --- 3. EXECUTE WORKFLOW ---
@@ -637,65 +651,62 @@ public static class AtlasAPIController
         AtlasLogger.LogAPI($"Executing workflow at: {executeUrl}");
         AtlasLogger.LogAPI($"Payload:\n{payloadJson}");
 
-        using (var httpContent =
-               new StringContent(payloadJson, System.Text.Encoding.UTF8, "application/json"))
+        var executeContent = new StringContent(payloadJson, System.Text.Encoding.UTF8, "application/json");
+        using var executeResponse = await PostWithTimeoutAsync(executeUrl, executeContent);
+        if (!executeResponse.IsSuccessStatusCode)
         {
-            HttpResponseMessage executeResponse = await PostWithTimeoutAsync(executeUrl, httpContent);
-            if (!executeResponse.IsSuccessStatusCode)
+            string body = await ReadResponseBodyAsync(executeResponse);
+            AtlasLogger.LogError(FormatApiError(
+                executeResponse,
+                body,
+                $"Workflow execution failed. Status: {executeResponse.StatusCode}"));
+            return null;
+        }
+
+        string finalJsonResponse = await ReadResponseBodyAsync(executeResponse);
+        AtlasLogger.LogAPI($"Workflow executed successfully. Response:\n{finalJsonResponse}");
+
+        var finalData = JsonConvert.DeserializeObject<Dictionary<string, object>>(finalJsonResponse);
+        if (finalData == null || !finalData.TryGetValue("outputs", out var outputsRaw))
+        {
+            AtlasLogger.LogError("Response does not contain 'outputs' field.");
+            return null;
+        }
+
+        var outputResults =
+            JsonConvert.DeserializeObject<Dictionary<string, object>>(outputsRaw.ToString());
+
+        // --- 4. DOWNLOAD RESULTING FILES FOR ASSET OUTPUTS ---
+        if (state.Outputs != null && outputResults != null)
+        {
+            foreach (var outputParam in state.Outputs)
             {
-                string body = await executeResponse.Content.ReadAsStringAsync();
-                AtlasLogger.LogError($"Workflow execution failed. Status: {executeResponse.StatusCode}\n{body}");
-                return null;
-            }
-
-            string finalJsonResponse = await executeResponse.Content.ReadAsStringAsync();
-            AtlasLogger.LogAPI($"Workflow executed successfully. Response:\n{finalJsonResponse}");
-
-            var finalData = JsonConvert.DeserializeObject<Dictionary<string, object>>(finalJsonResponse);
-            if (finalData == null || !finalData.TryGetValue("outputs", out var outputsRaw))
-            {
-                AtlasLogger.LogError("Response does not contain 'outputs' field.");
-                return null;
-            }
-
-            var outputResults =
-                JsonConvert.DeserializeObject<Dictionary<string, object>>(outputsRaw.ToString());
-
-            // --- 4. DOWNLOAD RESULTING FILES FOR ASSET OUTPUTS ---
-            if (state.Outputs != null && outputResults != null)
-            {
-                foreach (var outputParam in state.Outputs)
+                if (IsBinaryFileOutputParam(outputParam.ParamType) &&
+                    outputResults.TryGetValue(outputParam.ParamId, out var fileIdObj))
                 {
-                    if (IsBinaryFileOutputParam(outputParam.ParamType) &&
-                        outputResults.TryGetValue(outputParam.ParamId, out var fileIdObj))
+                    string fileId = fileIdObj?.ToString();
+                    if (string.IsNullOrEmpty(fileId))
+                        continue;
+
+                    string downloadedPath =
+                        await DownloadFileAsync(baseUrl, state.Version, state.ActiveApiId, fileId, outputParam);
+
+                    if (!string.IsNullOrEmpty(downloadedPath))
                     {
-                        string fileId = fileIdObj?.ToString();
-                        if (string.IsNullOrEmpty(fileId))
-                            continue;
-
-                        // NOTE: we assume DownloadFileAsync has signature:
-                        // DownloadFileAsync(string baseUrl, string version, string apiId, string fileId, AtlasWorkflowParamState outputParam)
-                        string downloadedPath =
-                            await DownloadFileAsync(baseUrl, state.Version, state.ActiveApiId, fileId, outputParam);
-
-                        if (!string.IsNullOrEmpty(downloadedPath))
-                        {
-                            // Replace the file_id with the local path
-                            outputResults[outputParam.ParamId] = downloadedPath;
-                        }
+                        outputResults[outputParam.ParamId] = downloadedPath;
                     }
                 }
             }
-
-            return outputResults;
         }
+
+        return outputResults;
     }
     /// <summary>
     /// Downloads a file from the API and returns the temporary path.
     /// </summary>
     private static async Task<string> DownloadFileAsync(string baseUrl, string version, string apiId, string fileId, AtlasWorkflowParamState outputParam)
     {
-        string downloadUrl = $"{baseUrl}/{version}/download_binary_result/{apiId}/{fileId}";
+        string downloadUrl = AtlasApiVersion.BuildDownloadUrl(baseUrl, version, apiId, fileId);
         AtlasLogger.LogAPI($"Downloading file for output '{outputParam.ParamId}' from: {downloadUrl}");
 
         try

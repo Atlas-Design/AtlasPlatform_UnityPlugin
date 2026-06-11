@@ -99,7 +99,30 @@ public class AtlasSettingsProvider : SettingsProvider
             }
         };
 
-        // 6. Initialize and wire verbose logging toggle
+        // 6. Initialize and wire authentication settings
+        var workspaceApiKeyField = rootElement.Q<TextField>("workspace-api-key-field");
+        var readApiKeyEnvToggle = rootElement.Q<Toggle>("read-api-key-env-toggle");
+
+        if (workspaceApiKeyField != null)
+        {
+            workspaceApiKeyField.isPasswordField = true;
+            workspaceApiKeyField.SetValueWithoutNotify(SettingsManager.GetWorkspaceApiKey());
+            workspaceApiKeyField.RegisterValueChangedCallback(evt =>
+            {
+                SettingsManager.SetWorkspaceApiKey(evt.newValue);
+            });
+        }
+
+        if (readApiKeyEnvToggle != null)
+        {
+            readApiKeyEnvToggle.SetValueWithoutNotify(SettingsManager.GetReadApiKeyFromEnvironment());
+            readApiKeyEnvToggle.RegisterValueChangedCallback(evt =>
+            {
+                SettingsManager.SetReadApiKeyFromEnvironment(evt.newValue);
+            });
+        }
+
+        // 7. Initialize and wire verbose logging toggle
         if (verboseLoggingToggle != null)
         {
             verboseLoggingToggle.SetValueWithoutNotify(SettingsManager.GetVerboseLogging());
@@ -113,7 +136,7 @@ public class AtlasSettingsProvider : SettingsProvider
             });
         }
 
-        // 7. Initialize and wire API timeout settings
+        // 8. Initialize and wire API timeout settings
         var timeoutSlider = rootElement.Q<SliderInt>("timeout-slider");
         var timeoutValueLabel = rootElement.Q<Label>("timeout-value-label");
         var noTimeoutToggle = rootElement.Q<Toggle>("no-timeout-toggle");
@@ -177,7 +200,7 @@ public class AtlasSettingsProvider : SettingsProvider
             });
         }
 
-        // 8. Initialize and wire notification settings
+        // 9. Initialize and wire notification settings
         var notifyJobCompleteToggle = rootElement.Q<Toggle>("notify-job-complete-toggle");
         if (notifyJobCompleteToggle != null)
         {
@@ -188,7 +211,7 @@ public class AtlasSettingsProvider : SettingsProvider
             });
         }
 
-        // 9. Initialize and wire storage settings
+        // 10. Initialize and wire storage settings
         var tempFilesInfoLabel = rootElement.Q<Label>("temp-files-info-label");
         var maxStorageSlider = rootElement.Q<SliderInt>("max-storage-slider");
         var maxStorageLabel = rootElement.Q<Label>("max-storage-label");

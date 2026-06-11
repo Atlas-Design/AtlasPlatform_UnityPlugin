@@ -1,11 +1,18 @@
 {
   "name": "com.atlas.workflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Atlas Workflow",
-  "description": "An editor tool for running Atlas workflows inside Unity.",
+  "description": "An editor tool for running Atlas Platform API v0.2 workflows inside Unity.",
   "unity": "2023.1",
+  "documentationUrl": "https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin#readme",
+  "changelogUrl": "https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin/blob/main/CHANGELOG.md",
+  "license": "MIT",
   "author": {
     "name": "Atlas"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Atlas-Design/AtlasPlatform_UnityPlugin.git"
   },
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.2",

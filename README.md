@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Unity-2023.1+-black?logo=unity" alt="Unity 2023.1+"/>
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"/>
-  <img src="https://img.shields.io/badge/Version-0.1.0-green" alt="Version 0.1.0"/>
+  <img src="https://img.shields.io/badge/Version-0.2.0-green" alt="Version 0.2.0"/>
   <img src="https://img.shields.io/badge/Status-Early%20Development-orange" alt="Status"/>
 </p>
 
@@ -41,9 +41,10 @@ You stay inside familiar Unity menus and windows — the plugin handles talking 
 - **Run many variations** — **Atlas → Atlas Batch**: same workflow, multiple rows of inputs; save drafts, run or cancel the whole queue.
 - **Watch progress and history** — **Atlas → Atlas Job History**: see what’s running, open past runs, and switch between a **Jobs** list and a **Batches** view when you use batch runs.
 - **Bring results into the project** — import or reveal generated files from the UI when offered (textures, models, audio, etc.).
-- **Adjust basics** — **Atlas → Atlas Workflow Settings** for save folder, how long to wait, and notifications.
+- **Adjust basics** — **Atlas → Atlas Workflow Settings** for your API key, save folder, how long to wait, and notifications.
+- **Atlas Platform API v0.2** — workspace API key auth, async execution with polling, and version-aware upload/download URLs.
 
-> **Note:** You need an **internet connection** and **access to Atlas Platform** (as set up in your workflow file). Audio **outputs** are supported; uploading audio **as an input** is not supported in this version.
+> **Note:** You need an **internet connection**, a **workspace API key** (for API **v0.2+** workflows), and **access to Atlas Platform**. Import workflow JSON exported for **API v0.2** from the Atlas Platform. Audio **outputs** are supported; uploading audio **as an input** is not supported in this version.
 
 ---
 
@@ -57,7 +58,7 @@ This window is for **one workflow at a time**: pick what to run, fill in inputs,
 
 | Area | What it’s for |
 |------|----------------|
-| **Workflow Library** | **Dropdown** — switch between workflows you’ve already imported. **Import** — add a new workflow from a `.json` file your team shared. **✕** — remove the selected workflow from the library (does not delete the file on disk). |
+| **Workflow Library** | **Dropdown** — switch between workflows you’ve already imported. **Import** — add a workflow from a **v0.2** `.json` file exported from Atlas Platform. **✕** — remove the selected workflow from the library (does not delete the file on disk). |
 | **Selected Workflow** | Shows the **name and details** of the current workflow, then **Inputs** (everything you must set before running), then **Outputs** (what you’ll get back — previews and paths fill in after a successful run). |
 | Bottom row | **Open Job History** — jumps to **Atlas → Atlas Job History** to watch runs or browse the past. **▶ Run …** — starts one execution using the values you entered (the button label includes the workflow name). |
 
@@ -157,10 +158,13 @@ This is the **mission control** view: everything **currently running** plus the 
 
 ---
 
-## 📷 Documentation images (optional)
+## 📷 Documentation images
 
 | File | Status |
 |------|--------|
+| `Settings.png` | Present — full settings page ([Settings](#-settings)). |
+| `Settings_KeyFields_API.png` | Present — **Authentication** callout ([Authentication](#authentication)). |
+| `Settings_KeyFields.png` | Present — **Asset Save Path** and **Request Timeout** ([Output, API, and other settings](#output-api-and-other-settings)). |
 | `EditorWindow_Annotated.png` | Not added yet — optional callout version of the single-run window ([Atlas Workflow](#-atlas-workflow-single-run)). |
 
 All other images referenced in this README are present under `Docs~/Images/`.
@@ -170,8 +174,11 @@ All other images referenced in this README are present under `Docs~/Images/`.
 ## 📦 Requirements
 
 - **Unity** 2023.1 or newer  
-- **Atlas Platform** access (your workflows are configured to use it)  
+- **Atlas Platform** access — workflows point at your team’s platform URL (for example `https://api.prod-market.atlas.design`)  
+- **Workspace API key** (`atk_...`) — required for workflows exported at **API v0.2+**; create one in Atlas **Workspace settings → API Keys**  
 - Extra packages the plugin needs (JSON, GLB tools) are installed automatically with the package.
+
+> **Legacy workflows:** JSON at **API v0.1** may still run without a key if your platform supports it. New exports should use **v0.2**.
 
 ---
 
@@ -190,6 +197,7 @@ All other images referenced in this README are present under `Docs~/Images/`.
 ### After install
 
 Under the top menu **Atlas** you should see **Atlas Workflow**, **Atlas Batch**, **Atlas Job History**, and **Atlas Workflow Settings**.  
+You can also open settings via **Edit → Project Settings → Project → Atlas Workflow**.  
 On newer Unity versions, an **Atlas** entry may also appear on the main toolbar (you can show or hide it from the toolbar’s right-click menu).
 
 ---
@@ -198,12 +206,35 @@ On newer Unity versions, an **Atlas** entry may also appear on the main toolbar 
 
 The three windows above (**Atlas Workflow**, **Atlas Batch**, **Atlas Job History**) are where you spend your time; these steps are the shortest path to a first successful run.
 
-1. Open **Atlas → Atlas Workflow**.
-2. Open **Atlas → Atlas Workflow Settings** and set **Asset Save Folder** (must be under `Assets/`) and **API Timeout** if you need longer runs.
-3. Click **Import** and choose the **workflow file** (.json) your team gave you. It appears in the library dropdown.
-4. Fill in the fields (images and models can come from the project or from disk via **Browse**).
-5. Click **Run**. Open **Atlas → Atlas Job History** to see **Running Jobs** and **Job History** when you want a dedicated view.
-6. When a run finishes, use the buttons on each output to **import** into the project or **show in Explorer** where available.
+#### Step 1: Configure your API key
+
+Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → Project → Atlas Workflow**) and set:
+
+- **Workspace API Key** — your Atlas workspace key (`atk_...`), from **Workspace settings → API Keys** on the platform  
+- Or enable **Read Key from Environment** and set `ATLAS_API_KEY` (or `API_KEY`) before launching Unity — useful for automation
+
+Runs on **API v0.2+** workflows fail immediately if no key is configured.
+
+#### Step 2: Open the Workflow window
+
+Open **Atlas → Atlas Workflow**.
+
+#### Step 3: Configure paths (optional)
+
+In the same settings page, adjust **Asset Save Folder** (must be under `Assets/`) and **API Timeout** if you need longer runs.
+
+#### Step 4: Import a workflow
+
+1. Click **Import** in the Workflow Library.  
+2. Choose a workflow **JSON exported for API v0.2** from the Atlas Platform.  
+3. The workflow appears in the library dropdown.
+
+#### Step 5: Configure and run
+
+1. Fill in the fields (images and models from the project or **Browse** to a file on disk).  
+2. Click **▶ Run …** and wait for the platform to finish.  
+3. Open **Atlas → Atlas Job History** for **Running Jobs** and past runs.  
+4. When a run finishes, use each output’s **import** or **reveal** actions where available.
 
 **Batch (optional):** **Atlas → Atlas Batch** → choose the same workflow → add rows (each row is one run) → **Run batch**. To stop a batch you started there, use **Cancel batch** in that window. In **Atlas Job History**, use **Batches** to group batch runs, then open a batch to see its jobs; **← Batches** goes back.
 
@@ -216,13 +247,30 @@ Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → P
 <p align="center">
   <img src="Docs~/Images/Settings.png" alt="Atlas Workflow project settings" width="85%"/>
   <br/>
-  <em>Atlas Workflow Settings — full project settings view</em>
+  <em>Atlas Workflow Settings — output, authentication, API timeout, notifications, and storage</em>
 </p>
 
 <p align="center">
-  <img src="Docs~/Images/Settings_KeyFields.png" alt="Asset Save Folder and API Timeout in Atlas Workflow settings" width="85%"/>
+  <img src="Docs~/Images/Settings_KeyFields_API.png" alt="Workspace API Key and environment fallback in Atlas Workflow settings" width="85%"/>
   <br/>
-  <em>Key fields — <strong>Asset Save Folder</strong> and <strong>API Timeout</strong></em>
+  <em><strong>Authentication</strong> — <strong>Workspace API Key</strong> and <strong>Read Key from Environment</strong></em>
+</p>
+
+### Authentication
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Workspace API Key** | *(empty)* | Bearer token for Atlas Platform (`atk_...`). Required for **API v0.2+** workflow runs. |
+| **Read Key from Environment** | Enabled | When the key field is empty, use `ATLAS_API_KEY` or `API_KEY` from the environment |
+
+Keys are sent as `Authorization: Bearer <key>` on upload, execute, status, and download requests.
+
+### Output, API, and other settings
+
+<p align="center">
+  <img src="Docs~/Images/Settings_KeyFields.png" alt="Asset save path and API request timeout in Atlas Workflow settings" width="70%"/>
+  <br/>
+  <em><strong>Output</strong> and <strong>API</strong> — where results are saved and how long runs may wait</em>
 </p>
 
 | What | Why it matters |
@@ -237,17 +285,44 @@ Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → P
 
 ## 💡 How it works (short)
 
-- A **workflow** is a small file that describes what to run on Atlas Platform. You don’t edit JSON in normal use — you **Import** it once and pick it from the list.
-- Each time you run, the plugin creates a **job**: a saved record with your inputs and outputs so you can compare runs later.
-- **Batch** runs create one job per row; **Batches** in history is just a clearer way to browse those grouped runs.
+- A **workflow** is a small JSON file exported from Atlas Platform. You don’t edit it in normal use — **Import** it once and pick it from the library.
+- **API v0.2+** workflows use workspace-scoped upload/download URLs and require your **workspace API key** on every HTTP call.
+- Each run creates a **job**: a saved record (under `AtlasWorkflowJobs/`) with your inputs and outputs so you can compare runs later.
+- **Batch** runs create one job per row; **Batches** in history is a clearer way to browse those grouped runs.
 
 ---
 
 ## 🔧 Troubleshooting
 
+### Authentication
+
+#### “API key required” / run blocked before it starts
+
+**Possible causes:**
+- No API key in Project Settings
+- **API v0.2+** workflow but empty key field and no environment variable
+
+**Solutions:**
+1. Set **Workspace API Key** under **Atlas → Atlas Workflow Settings**, or set `ATLAS_API_KEY` and enable **Read Key from Environment**
+2. Create a new key in Atlas **Workspace settings → API Keys**
+
+#### HTTP 401 or 403
+
+**Possible causes:**
+- Invalid or revoked API key
+- Workflow JSON from a workspace your key cannot access
+
+**Solutions:**
+1. Re-copy the key from Atlas **Workspace settings → API Keys**
+2. Re-import workflow JSON exported for your workspace (**API v0.2**)
+3. Confirm the key’s workspace matches the workflow you imported
+
+### Execution and assets
+
 | Problem | What to try |
 |--------|-------------|
 | Run fails or times out | Check internet; in Settings, increase **API Timeout**; ask your team if the workflow or platform access changed. |
+| Upload or submit error | Enable **Verbose logging**, check the **Console** for HTTP status and message; verify image/mesh file paths exist (especially **Browse** / external files). |
 | Texture or model export error | For textures: in Unity’s **Inspector** for that image, enable **Read/Write** if the error says it’s not readable. |
 | Audio file looks wrong or won’t import | Use **Reveal** to find the file on disk; if needed import it manually. Your team can confirm the workflow is set up for audio output. |
 | Batch won’t stop | Use **Cancel batch** in **Atlas Batch** — that’s different from **Dismiss** on a card in the jobs window. |
@@ -258,6 +333,8 @@ Open **Atlas → Atlas Workflow Settings** (or **Edit → Project Settings → P
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ---
 

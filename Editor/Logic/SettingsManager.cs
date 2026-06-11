@@ -14,6 +14,8 @@ public static class SettingsManager
     private const string NotifyOnJobCompleteKey = "AtlasWorkflow_NotifyOnJobComplete";
     private const string MaxTempStorageMBKey = "AtlasWorkflow_MaxTempStorageMB";
     private const string WarnOnTempExceededKey = "AtlasWorkflow_WarnOnTempExceeded";
+    private const string WorkspaceApiKeyKey = "AtlasWorkflow_WorkspaceApiKey";
+    private const string ReadApiKeyFromEnvironmentKey = "AtlasWorkflow_ReadApiKeyFromEnvironment";
     
     // Default values
     private const string DefaultSavePath = "Assets/AtlasOutputs";
@@ -37,6 +39,35 @@ public static class SettingsManager
     /// Default max temp storage in MB.
     /// </summary>
     public const int DefaultMaxTempStorageMB = 500;
+
+    #region Authentication
+
+    public static string GetWorkspaceApiKey()
+    {
+        return EditorPrefs.GetString(WorkspaceApiKeyKey, string.Empty);
+    }
+
+    public static void SetWorkspaceApiKey(string apiKey)
+    {
+        EditorPrefs.SetString(WorkspaceApiKeyKey, apiKey ?? string.Empty);
+    }
+
+    public static bool GetReadApiKeyFromEnvironment()
+    {
+        return EditorPrefs.GetBool(ReadApiKeyFromEnvironmentKey, true);
+    }
+
+    public static void SetReadApiKeyFromEnvironment(bool enabled)
+    {
+        EditorPrefs.SetBool(ReadApiKeyFromEnvironmentKey, enabled);
+    }
+
+    public static bool HasWorkspaceApiKey()
+    {
+        return AtlasPlatformAuth.HasConfiguredApiKey();
+    }
+
+    #endregion
 
     #region Save Path
 

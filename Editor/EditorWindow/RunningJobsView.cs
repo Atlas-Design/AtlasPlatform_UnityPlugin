@@ -13,6 +13,29 @@ public class RunningJobsView
     private readonly Action<AtlasWorkflowJobState> onStopJob;
     private string activeRunningJobId;
 
+    private readonly Dictionary<string, RunningJobRow> trackedRows = new Dictionary<string, RunningJobRow>();
+    private bool editorUpdateHooked;
+    private double lastAnimationTickTime;
+    private double lastElapsedTickTime;
+
+    // EditorApplication.update can fire many times per rendered frame — advance visuals on a fixed wall-clock tick only.
+    private const double AnimationTickIntervalSeconds = 0.1;   // 10 ticks / second
+    private const double ElapsedTickIntervalSeconds = 0.25;    // elapsed label refresh
+    private const float ProgressStepPerTick = 2.5f;            // ~4 s per full bar sweep
+    private const float PulseStepPerTick = 0.04f;              // green-dot breathe
+
+    private sealed class RunningJobRow
+    {
+        public AtlasWorkflowJobState Job;
+        public VisualElement Root;
+        public Label TotalTimeField;
+        public ProgressBar ProgressBar;
+        public VisualElement Spinner;
+        public float ProgressValue;
+        public float PulsePhase;
+        public Action StopClickedHandler;
+    }
+
     public RunningJobsView(VisualElement panelRoot, ScrollView listRoot, Action<AtlasWorkflowJobState> onStopJob = null)
     {
         this.panelRoot = panelRoot;
@@ -41,8 +64,6 @@ public class RunningJobsView
         if (panelRoot == null || listRoot == null)
             return;
 
-        listRoot.Clear();
-
         var running = jobs?
             .Where(j => j.Status == JobStatus.Running)
             .ToList() ?? new List<AtlasWorkflowJobState>();
@@ -50,34 +71,155 @@ public class RunningJobsView
         if (running.Count == 0)
         {
             panelRoot.style.display = DisplayStyle.None;
+            ClearTrackedRows();
+            SetEditorUpdateHooked(false);
             return;
         }
 
         panelRoot.style.display = DisplayStyle.Flex;
 
+        var runningIds = new HashSet<string>(running.Select(j => j.JobId));
+
+        foreach (var staleId in trackedRows.Keys.Where(id => !runningIds.Contains(id)).ToList())
+            RemoveTrackedRow(staleId);
+
         foreach (var job in running)
         {
+            if (trackedRows.TryGetValue(job.JobId, out var existing) && existing.Root?.panel != null)
+            {
+                existing.Job = job;
+                UpdateRowStaticFields(existing, job);
+                continue;
+            }
+
+            if (trackedRows.ContainsKey(job.JobId))
+                RemoveTrackedRow(job.JobId);
+
             var row = CreateRunningRow(job);
-            listRoot.Add(row);
+            listRoot.Add(row.Root);
+            trackedRows[job.JobId] = row;
+        }
+
+        SetEditorUpdateHooked(true);
+    }
+
+    private void ClearTrackedRows()
+    {
+        foreach (var id in trackedRows.Keys.ToList())
+            RemoveTrackedRow(id);
+    }
+
+    private void RemoveTrackedRow(string jobId)
+    {
+        if (!trackedRows.TryGetValue(jobId, out var row))
+            return;
+
+        row.Root?.RemoveFromHierarchy();
+        trackedRows.Remove(jobId);
+    }
+
+    private void SetEditorUpdateHooked(bool hooked)
+    {
+        if (hooked)
+        {
+            if (!editorUpdateHooked)
+            {
+                lastAnimationTickTime = 0;
+                lastElapsedTickTime = 0;
+                EditorApplication.update += OnEditorUpdate;
+                editorUpdateHooked = true;
+            }
+        }
+        else if (editorUpdateHooked)
+        {
+            EditorApplication.update -= OnEditorUpdate;
+            editorUpdateHooked = false;
+            lastAnimationTickTime = 0;
+            lastElapsedTickTime = 0;
         }
     }
 
-    private VisualElement CreateRunningRow(AtlasWorkflowJobState job)
+    private void OnEditorUpdate()
     {
-        VisualElement row;
+        if (trackedRows.Count == 0)
+        {
+            SetEditorUpdateHooked(false);
+            return;
+        }
+
+        double editorNow = EditorApplication.timeSinceStartup;
+
+        bool shouldAnimate = lastAnimationTickTime <= 0
+            || editorNow - lastAnimationTickTime >= AnimationTickIntervalSeconds;
+        if (shouldAnimate)
+            lastAnimationTickTime = editorNow;
+
+        bool shouldUpdateElapsed = lastElapsedTickTime <= 0
+            || editorNow - lastElapsedTickTime >= ElapsedTickIntervalSeconds;
+        if (shouldUpdateElapsed)
+            lastElapsedTickTime = editorNow;
+
+        if (!shouldAnimate && !shouldUpdateElapsed)
+            return;
+
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var row in trackedRows.Values)
+        {
+            if (row.Root?.panel == null || row.Job == null)
+                continue;
+
+            if (shouldUpdateElapsed && row.TotalTimeField != null)
+            {
+                var elapsed = utcNow - row.Job.CreatedAtUtc;
+                row.TotalTimeField.text = FormatTimeSpan(elapsed);
+            }
+
+            if (!shouldAnimate)
+                continue;
+
+            row.ProgressValue = (row.ProgressValue + ProgressStepPerTick) % 100f;
+            if (row.ProgressBar != null)
+            {
+                row.ProgressBar.lowValue = 0f;
+                row.ProgressBar.highValue = 100f;
+                row.ProgressBar.value = row.ProgressValue;
+            }
+
+            row.PulsePhase = (row.PulsePhase + PulseStepPerTick) % (2f * Mathf.PI);
+            if (row.Spinner != null)
+                row.Spinner.style.opacity = 0.55f + 0.35f * Mathf.Sin(row.PulsePhase);
+        }
+    }
+
+    private RunningJobRow CreateRunningRow(AtlasWorkflowJobState job)
+    {
+        VisualElement root;
 
         if (jobHeaderTemplate != null)
-            row = jobHeaderTemplate.Instantiate();
+            root = jobHeaderTemplate.Instantiate();
         else
-            row = new VisualElement();
+            root = new VisualElement();
 
-        var titleField = row.Q<Label>("Title");
-        var startTimeField = row.Q<Label>("StartTime");
-        var statusField = row.Q<Label>("Status");
-        var totalTimeField = row.Q<Label>("TotalTime");
-        var progressBar = row.Q<ProgressBar>("Progress");
-        var spinner = row.Q<VisualElement>("Spinner");
-        var stopButton = row.Q<Button>("StopJob");
+        var row = new RunningJobRow
+        {
+            Job = job,
+            Root = root,
+            TotalTimeField = root.Q<Label>("TotalTime"),
+            ProgressBar = root.Q<ProgressBar>("Progress"),
+            Spinner = root.Q<VisualElement>("Spinner")
+        };
+
+        UpdateRowStaticFields(row, job);
+        return row;
+    }
+
+    private void UpdateRowStaticFields(RunningJobRow row, AtlasWorkflowJobState job)
+    {
+        var titleField = row.Root.Q<Label>("Title");
+        var startTimeField = row.Root.Q<Label>("StartTime");
+        var statusField = row.Root.Q<Label>("Status");
+        var stopButton = row.Root.Q<Button>("StopJob");
 
         if (titleField != null)
         {
@@ -99,10 +241,10 @@ public class RunningJobsView
         if (statusField != null)
             statusField.text = job.Status.ToString();
 
-        if (totalTimeField != null)
+        if (row.TotalTimeField != null)
         {
             var elapsed = DateTime.UtcNow - job.CreatedAtUtc;
-            totalTimeField.text = FormatTimeSpan(elapsed);
+            row.TotalTimeField.text = FormatTimeSpan(elapsed);
         }
 
         if (stopButton != null)
@@ -112,52 +254,14 @@ public class RunningJobsView
             stopButton.tooltip = isActiveSession
                 ? "Request cancellation of the workflow run in this editor session."
                 : "Remove this job from Running (editor is not executing it; likely stale after restart). Server-side work may continue.";
-            if (onStopJob != null)
-                stopButton.clicked += () => onStopJob(job);
+
+            stopButton.clicked -= row.StopClickedHandler;
+            row.StopClickedHandler = onStopJob != null ? () => onStopJob(job) : null;
+            if (row.StopClickedHandler != null)
+                stopButton.clicked += row.StopClickedHandler;
             else
                 stopButton.SetEnabled(false);
         }
-
-        if (job.Status == JobStatus.Running)
-        {
-            float v = 0f;
-            float pulse = 0f;
-            var startTime = job.CreatedAtUtc;
-
-            IVisualElementScheduledItem scheduledItem = null;
-            scheduledItem = row.schedule.Execute(() =>
-            {
-                if (row.panel == null)
-                {
-                    scheduledItem?.Pause();
-                    return;
-                }
-
-                v = (v + 2f) % 100f;
-                if (progressBar != null)
-                    progressBar.value = v;
-
-                pulse = (pulse + 0.05f) % (2f * Mathf.PI);
-                if (spinner != null)
-                {
-                    float alpha = 0.6f + 0.4f * Mathf.Sin(pulse);
-                    spinner.style.opacity = alpha;
-                }
-
-                var elapsed = DateTime.UtcNow - startTime;
-                if (totalTimeField != null)
-                    totalTimeField.text = FormatTimeSpan(elapsed);
-
-            }).Every(50);
-
-            row.RegisterCallback<DetachFromPanelEvent>(_ => { scheduledItem?.Pause(); });
-        }
-        else if (progressBar != null)
-        {
-            progressBar.style.display = DisplayStyle.None;
-        }
-
-        return row;
     }
 
     private static string FormatTimeSpan(TimeSpan span)

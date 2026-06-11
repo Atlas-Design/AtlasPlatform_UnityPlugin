@@ -748,6 +748,12 @@ public sealed class WorkflowBatchEditorView
             return;
         }
 
+        if (!AtlasPlatformAuth.TryValidateForRun(_session.WorkflowState.Version, out string authError))
+        {
+            EditorUtility.DisplayDialog("Batch Editor", authError, "OK");
+            return;
+        }
+
         _batchCts?.Dispose();
         _batchCts = new CancellationTokenSource();
         ApplyBatchRunningUi(true);

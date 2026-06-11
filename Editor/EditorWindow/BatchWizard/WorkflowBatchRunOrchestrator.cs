@@ -41,6 +41,9 @@ public static class WorkflowBatchRunOrchestrator
         if (workflowTemplate == null || batchDefinition?.Rows == null || batchDefinition.Rows.Count == 0)
             return;
 
+        if (!AtlasPlatformAuth.TryValidateForRun(workflowTemplate.Version, out string authError))
+            throw new InvalidOperationException(authError);
+
         maxConcurrentApiRuns = Math.Max(1, maxConcurrentApiRuns);
         int total = batchDefinition.Rows.Count;
         string batchId = Guid.NewGuid().ToString();

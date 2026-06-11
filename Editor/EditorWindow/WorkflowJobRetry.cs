@@ -58,6 +58,13 @@ public static class WorkflowJobRetry
             return;
         }
 
+        if (!AtlasPlatformAuth.TryValidateForRun(tempState.Version, out string authError))
+        {
+            UnityEngine.Object.DestroyImmediate(tempState);
+            EditorUtility.DisplayDialog("Retry job", authError, "OK");
+            return;
+        }
+
         WorkflowManager.ApplyInputsSnapshotToState(tempState, failedJob.InputsSnapshot);
         var jobState = WorkflowManager.CloneStateForJobRun(tempState);
         UnityEngine.Object.DestroyImmediate(tempState);

@@ -208,6 +208,14 @@ public class AtlasWorkflowEditor : EditorWindow
     {
         var statusLabel = jobView.Q<Label>("status-label");
 
+        if (!AtlasPlatformAuth.TryValidateForRun(state.Version, out string authError))
+        {
+            EditorUtility.DisplayDialog("Atlas Workflow", authError, "OK");
+            if (statusLabel != null)
+                statusLabel.text = "API key required";
+            return;
+        }
+
         var jobState = WorkflowManager.CloneStateForJobRun(state);
         var job = WorkflowManager.CreateJobFromState(jobState);
 

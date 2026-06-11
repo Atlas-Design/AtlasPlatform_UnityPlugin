@@ -22,5 +22,9 @@ UserSettings/
 # Packaging artifacts
 *.unitypackage
 
+# Local planning docs (not shipped with the package)
+*Roadmap.md
+*Roadmap.md.meta
+
 # Misc
 *.pidb
