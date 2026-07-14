@@ -42,6 +42,13 @@
     flex-grow: 1;
 }
 
+.workflow-header__right {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
 .workflow-status-dot {
     width: 10px;
     height: 10px;
@@ -70,7 +77,22 @@
     -unity-font-style: italic;
     color: rgb(180, 180, 180);
     flex-shrink: 0;
-    margin-left: 10px;
+}
+
+.latest-job-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.latest-job-button {
+    min-height: 20px;
+    height: 20px;
+    padding: 1px 8px;
+    margin-left: 4px;
+    font-size: 10px;
+    border-radius: 3px;
 }
 
 /* Single-line failure hint (full text in tooltip) — only visible when job has ErrorMessage */

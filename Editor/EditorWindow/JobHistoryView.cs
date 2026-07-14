@@ -438,6 +438,44 @@ public class JobHistoryView
     }
 
     /// <summary>
+    /// Opens the jobs list view and selects the requested job, clearing filters that might hide it.
+    /// </summary>
+    public bool SelectJobById(string jobId)
+    {
+        if (string.IsNullOrEmpty(jobId))
+            return false;
+
+        var job = allJobs.FirstOrDefault(j => j != null && j.JobId == jobId);
+        if (job == null)
+            return false;
+
+        viewModeIsBatches = false;
+        batchesDrilldownBatchId = null;
+        currentStatusFilter = "All";
+        currentTypeFilter = "All";
+        currentDateFilter = "All Time";
+        selectedJob = job;
+        lastSelectedRow = null;
+
+        statusFilter?.SetValueWithoutNotify(currentStatusFilter);
+        typeFilter?.SetValueWithoutNotify(currentTypeFilter);
+        dateFilter?.SetValueWithoutNotify(currentDateFilter);
+
+        dateGroupCollapsed["Today"] = false;
+        dateGroupCollapsed["Yesterday"] = false;
+        dateGroupCollapsed["Last 7 Days"] = false;
+        dateGroupCollapsed["Older"] = false;
+
+        UpdateViewModeButtonStyles();
+        ApplyFilterToolbarState();
+        RefreshFilteredList();
+        ShowJobDetails(job);
+        onJobSelected?.Invoke(job);
+
+        return true;
+    }
+
+    /// <summary>
     /// Updates the type filter dropdown with unique job types from the job list.
     /// </summary>
     private void UpdateTypeFilterChoices()

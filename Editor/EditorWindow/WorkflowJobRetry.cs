@@ -105,7 +105,7 @@ public static class WorkflowJobRetry
                     WorkflowManager.UpdateJobInputsFromState(newJob, jobState);
                     WorkflowManager.UpdateJobOutputsFromState(newJob, jobState);
                     WorkflowManager.MarkJobSucceeded(newJob, notifyUser: true);
-                    WorkflowEditorRunSession.NotifyJobSelected(newJob);
+                    WorkflowEditorRunSession.NotifyJobSelectedOnNextEditorUpdate(newJob);
                 }
                 else
                 {

@@ -21,6 +21,11 @@ public class WorkflowJobView : VisualElement
     private VisualElement jobRetryRow;
     private Button jobRetryButton;
     private Action _retryClickAction;
+    private VisualElement latestJobActions;
+    private Button viewLatestJobButton;
+    private Button openLatestOutputsButton;
+    private Action _viewLatestJobClickAction;
+    private Action _openLatestOutputsClickAction;
 
     private const int JobErrorPreviewMaxChars = 200;
 
@@ -47,6 +52,9 @@ public class WorkflowJobView : VisualElement
         jobErrorLabel = this.Q<Label>("job-error-label");
         jobRetryRow = this.Q<VisualElement>("job-retry-row");
         jobRetryButton = this.Q<Button>("job-retry-button");
+        latestJobActions = this.Q<VisualElement>("latest-job-actions");
+        viewLatestJobButton = this.Q<Button>("view-latest-job-button");
+        openLatestOutputsButton = this.Q<Button>("open-latest-outputs-button");
     }
 
     // Public method to update this component's UI from the state object.
@@ -111,6 +119,64 @@ public class WorkflowJobView : VisualElement
             jobRetryButton.clicked -= _retryClickAction;
             _retryClickAction = null;
         }
+        ClearLatestJobActions();
+    }
+
+    public void ConfigureLatestJobActions(
+        AtlasWorkflowJobState job,
+        Action onViewJob,
+        Action onOpenOutputsFolder,
+        bool hasOutputsFolder)
+    {
+        ClearLatestJobActions();
+
+        if (job == null || onViewJob == null || latestJobActions == null || viewLatestJobButton == null)
+            return;
+
+        latestJobActions.style.display = DisplayStyle.Flex;
+        viewLatestJobButton.style.display = DisplayStyle.Flex;
+        viewLatestJobButton.text = job.Status == JobStatus.Running ? "View Job" : "View Results";
+        viewLatestJobButton.tooltip = "Open Job History focused on this run.";
+        _viewLatestJobClickAction = onViewJob;
+        viewLatestJobButton.clicked += _viewLatestJobClickAction;
+
+        bool canOpenOutputs = job.Status == JobStatus.Succeeded &&
+                              hasOutputsFolder &&
+                              onOpenOutputsFolder != null &&
+                              openLatestOutputsButton != null;
+
+        if (openLatestOutputsButton != null)
+        {
+            openLatestOutputsButton.style.display = canOpenOutputs ? DisplayStyle.Flex : DisplayStyle.None;
+            if (canOpenOutputs)
+            {
+                openLatestOutputsButton.tooltip = "Reveal this job's generated output files.";
+                _openLatestOutputsClickAction = onOpenOutputsFolder;
+                openLatestOutputsButton.clicked += _openLatestOutputsClickAction;
+            }
+        }
+    }
+
+    private void ClearLatestJobActions()
+    {
+        if (viewLatestJobButton != null && _viewLatestJobClickAction != null)
+        {
+            viewLatestJobButton.clicked -= _viewLatestJobClickAction;
+            _viewLatestJobClickAction = null;
+        }
+
+        if (openLatestOutputsButton != null && _openLatestOutputsClickAction != null)
+        {
+            openLatestOutputsButton.clicked -= _openLatestOutputsClickAction;
+            _openLatestOutputsClickAction = null;
+        }
+
+        if (latestJobActions != null)
+            latestJobActions.style.display = DisplayStyle.None;
+        if (viewLatestJobButton != null)
+            viewLatestJobButton.style.display = DisplayStyle.None;
+        if (openLatestOutputsButton != null)
+            openLatestOutputsButton.style.display = DisplayStyle.None;
     }
     
     /// <summary>
@@ -140,6 +206,7 @@ public class WorkflowJobView : VisualElement
             jobRetryButton.clicked -= _retryClickAction;
             _retryClickAction = null;
         }
+        ClearLatestJobActions();
 
         // Set job context for import folder detection
         renderer.SetJobContext(job);

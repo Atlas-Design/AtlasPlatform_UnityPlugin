@@ -161,10 +161,10 @@ public static class WorkflowManager
 
         SettingsManager.CheckTempStorageLimit();
 
+        NotifyJobsMutated();
+
         if (notifyUser)
             NotifyJobComplete(job, true);
-
-        NotifyJobsMutated();
     }
 
     /// <summary>
@@ -181,13 +181,13 @@ public static class WorkflowManager
         job.Progress01 = 1f;
         SaveJobToDisk(job);
 
+        NotifyJobsMutated();
+
         if (notifyUser)
         {
             SettingsManager.CheckTempStorageLimit();
             NotifyJobComplete(job, false);
         }
-
-        NotifyJobsMutated();
     }
 
     /// <summary>

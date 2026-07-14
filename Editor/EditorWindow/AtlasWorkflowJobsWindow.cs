@@ -14,12 +14,20 @@ public class AtlasWorkflowJobsWindow : EditorWindow
     private VisualElement runningJobsPanel;
     private ScrollView runningJobsList;
     private RunningJobsView runningJobsView;
+    private string pendingSelectedJobId;
 
     /// <summary>Priority 20 (vs 0–1 for workflow/batch) so Unity inserts a menu separator above this item.</summary>
     [MenuItem("Atlas/Atlas Job History", false, 20)]
     public static void ShowWindow()
     {
         GetWindow<AtlasWorkflowJobsWindow>("Atlas Job History");
+    }
+
+    public static void ShowWindowForJob(AtlasWorkflowJobState job)
+    {
+        var window = GetWindow<AtlasWorkflowJobsWindow>("Atlas Job History");
+        window.Focus();
+        window.SelectJobWhenReady(job?.JobId);
     }
 
     private void CreateGUI()
@@ -70,6 +78,9 @@ public class AtlasWorkflowJobsWindow : EditorWindow
         WorkflowManager.JobsMutated += OnWorkflowJobsListMutated;
         historyView?.Refresh(WorkflowManager.Jobs);
         RefreshRunningJobsPanel();
+
+        if (!string.IsNullOrEmpty(pendingSelectedJobId))
+            SelectJobWhenReady(pendingSelectedJobId);
     }
 
     private void OnWorkflowJobsListMutated()
@@ -95,6 +106,30 @@ public class AtlasWorkflowJobsWindow : EditorWindow
         var menu = new GenericMenu();
         menu.AddItem(new GUIContent("Clear History"), false, () => { historyView?.ClearHistory(); });
         menu.ShowAsContext();
+    }
+
+    private void SelectJobWhenReady(string jobId)
+    {
+        if (string.IsNullOrEmpty(jobId))
+            return;
+
+        pendingSelectedJobId = jobId;
+
+        if (historyView == null)
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (this != null)
+                    SelectJobWhenReady(pendingSelectedJobId);
+            };
+            return;
+        }
+
+        WorkflowManager.LoadJobsFromDisk();
+        historyView.Refresh(WorkflowManager.Jobs);
+
+        if (historyView.SelectJobById(jobId))
+            pendingSelectedJobId = null;
     }
 
     private void OnDestroy()

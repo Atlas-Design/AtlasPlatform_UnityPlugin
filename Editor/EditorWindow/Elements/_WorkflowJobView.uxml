@@ -10,7 +10,13 @@
                     <ui:Label name="workflow-subtitle" text="v0.1 • api.prod.mlxar.com" class="workflow-subtitle" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:Label name="status-label" text="Ready" class="status-label" />
+            <ui:VisualElement class="workflow-header__right">
+                <ui:Label name="status-label" text="Ready" class="status-label" />
+                <ui:VisualElement name="latest-job-actions" class="latest-job-actions" style="display: none;">
+                    <ui:Button name="view-latest-job-button" text="View Results" class="latest-job-button" />
+                    <ui:Button name="open-latest-outputs-button" text="Open Outputs Folder" class="latest-job-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="job-error-row" class="job-error-row" style="flex-shrink: 0; display: none;">
             <ui:Label name="job-error-label" class="job-error-label" text="" />

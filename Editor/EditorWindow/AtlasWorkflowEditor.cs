@@ -221,6 +221,7 @@ public class AtlasWorkflowEditor : EditorWindow
 
         _activeRunCts = new CancellationTokenSource();
         WorkflowEditorRunSession.BeginActiveRun(job, _activeRunCts);
+        UpdateLatestRunShortcut(job);
 
         try
         {
@@ -248,18 +249,20 @@ public class AtlasWorkflowEditor : EditorWindow
 
                 statusLabel.text = "Complete";
 
-                WorkflowEditorRunSession.NotifyJobSelected(job);
+                WorkflowEditorRunSession.NotifyJobSelectedOnNextEditorUpdate(job);
             }
             else
             {
                 if (job.Status == JobStatus.Cancelled)
                 {
                     statusLabel.text = "Cancelled";
+                    WorkflowEditorRunSession.NotifyJobSelectedOnNextEditorUpdate(job);
                 }
                 else
                 {
                     statusLabel.text = "Failed";
                     WorkflowManager.MarkJobFailed(job, "Workflow execution returned null (check logs for details).");
+                    WorkflowEditorRunSession.NotifyJobSelectedOnNextEditorUpdate(job);
                 }
             }
         }
@@ -267,6 +270,7 @@ public class AtlasWorkflowEditor : EditorWindow
         {
             statusLabel.text = "Error";
             WorkflowManager.MarkJobFailed(job, ex.Message);
+            WorkflowEditorRunSession.NotifyJobSelectedOnNextEditorUpdate(job);
 
             AtlasLogger.LogException(ex, "Workflow execution failed");
         }
@@ -323,6 +327,53 @@ public class AtlasWorkflowEditor : EditorWindow
             statusLabel.text = (job == null)
                 ? "Idle"
                 : $"Last job: {job.Status} ({job.CreatedAtUtc.ToLocalTime():HH:mm:ss})";
+        }
+
+        UpdateLatestRunShortcut(job);
+    }
+
+    private void UpdateLatestRunShortcut(AtlasWorkflowJobState job)
+    {
+        if (jobView == null)
+            return;
+
+        jobView.ConfigureLatestJobActions(
+            job,
+            () => AtlasWorkflowJobsWindow.ShowWindowForJob(job),
+            () => OpenOutputsFolder(job),
+            HasOutputsFolder(job));
+    }
+
+    private static bool HasOutputsFolder(AtlasWorkflowJobState job)
+    {
+        if (job == null ||
+            job.Status != JobStatus.Succeeded ||
+            string.IsNullOrEmpty(job.JobFolderPath))
+            return false;
+
+        var outputsFolder = Path.Combine(job.JobFolderPath, "outputs");
+        if (!Directory.Exists(outputsFolder))
+            return false;
+
+        try
+        {
+            return Directory.GetFiles(outputsFolder).Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void OpenOutputsFolder(AtlasWorkflowJobState job)
+    {
+        if (job == null || string.IsNullOrEmpty(job.JobFolderPath))
+            return;
+
+        var outputsFolder = Path.Combine(job.JobFolderPath, "outputs");
+        if (Directory.Exists(outputsFolder))
+        {
+            EditorUtility.RevealInFinder(outputsFolder);
         }
     }
 

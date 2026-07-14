@@ -37,6 +37,14 @@ public static class WorkflowEditorRunSession
         JobSelectedForStatus?.Invoke(job);
     }
 
+    public static void NotifyJobSelectedOnNextEditorUpdate(AtlasWorkflowJobState job)
+    {
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            JobSelectedForStatus?.Invoke(job);
+        };
+    }
+
     /// <summary>
     /// Cancel when this session owns the run; otherwise dismiss (mark failed) for stale cards.
     /// </summary>
