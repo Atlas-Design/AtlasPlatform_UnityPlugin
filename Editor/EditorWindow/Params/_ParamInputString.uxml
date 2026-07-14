@@ -1,9 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:Style src="../Styles/_ParamStyles.uss" />
-    <ui:VisualElement class="param-row">
-        <ui:VisualElement name="type-indicator" class="type-indicator" />
-        <ui:Label name="label" text="Parameter Label" class="param-label" />
-        <ui:TextField name="value-field" class="param-value" />
-        <ui:Button name="copy-button" text="Copy" class="output-copy-button" />
+    <ui:VisualElement class="param-row-complex string-param-row">
+        <ui:VisualElement class="param-row-header string-param-header">
+            <ui:VisualElement name="type-indicator" class="type-indicator" />
+            <ui:Label name="label" text="Parameter Label" class="param-label" />
+        </ui:VisualElement>
+        <ui:VisualElement class="readonly-text-body">
+            <ui:TextField name="value-field" class="param-value" />
+            <ui:Button name="copy-button" text="Copy" class="output-copy-button" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

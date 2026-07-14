@@ -53,6 +53,7 @@
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
+    max-height: 120px;
     color: rgb(180, 180, 180);
     white-space: normal;
 }
@@ -98,6 +99,26 @@
     padding: 4px 6px; 
     margin-left: 14px;
     background-color: rgba(0, 0, 0, 0.2);
+}
+
+.string-param-row {
+    padding-bottom: 6px;
+}
+
+.string-param-header {
+    margin-bottom: 4px;
+}
+
+.readonly-text-body {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-left: 14px;
+}
+
+.readonly-text-body .param-value {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 /* Source dropdown (new compact style) */

@@ -9,6 +9,10 @@ using UnityEngine.UIElements;
 
 public class WorkflowParamRenderer
 {
+    private const float ReadOnlyTextMaxHeight = 120f;
+    private const float ReadOnlyTextLineHeight = 16f;
+    private const float ReadOnlyTextVerticalPadding = 14f;
+
     private readonly AtlasWorkflowState state;
     private readonly bool _markWorkflowAssetDirtyOnInputChange;
     private readonly VisualTreeAsset boolIn, numIn, strIn, imgIn, meshIn;
@@ -306,6 +310,7 @@ public class WorkflowParamRenderer
                 field.multiline = true;
                 field.isReadOnly = true;
                 field.AddToClassList("output-readonly-text");
+                ConfigureReadOnlyTextField(field, inputState.StringValue);
             }
         }
 
@@ -503,6 +508,7 @@ public class WorkflowParamRenderer
             field.value = outputState.StringValue;
             field.multiline = true;
             field.isReadOnly = true;
+            ConfigureReadOnlyTextField(field, outputState.StringValue);
         }
 
         var copyButton = row.Q<Button>("copy-button");
@@ -1184,6 +1190,53 @@ public class WorkflowParamRenderer
     {
         var label = row.Q<Label>("label");
         if (label != null) label.text = text;
+    }
+
+    private void ConfigureReadOnlyTextField(TextField field, string value)
+    {
+        if (field == null)
+            return;
+
+        field.verticalScrollerVisibility = ScrollerVisibility.Auto;
+        field.style.maxHeight = ReadOnlyTextMaxHeight;
+
+        var textScrollView = field.Q<ScrollView>();
+        if (textScrollView != null)
+        {
+            textScrollView.mode = ScrollViewMode.Vertical;
+            textScrollView.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            textScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+        }
+
+        void UpdateHeight()
+        {
+            float width = field.resolvedStyle.width;
+            int estimatedLines = EstimateWrappedLineCount(value, width);
+            float contentHeight = Mathf.Max(24f, estimatedLines * ReadOnlyTextLineHeight + ReadOnlyTextVerticalPadding);
+
+            field.style.height = Mathf.Min(ReadOnlyTextMaxHeight, contentHeight);
+        }
+
+        field.RegisterCallback<GeometryChangedEvent>(_ => UpdateHeight());
+        EditorApplication.delayCall += UpdateHeight;
+    }
+
+    private static int EstimateWrappedLineCount(string value, float fieldWidth)
+    {
+        if (string.IsNullOrEmpty(value))
+            return 1;
+
+        int charsPerLine = Mathf.Max(20, Mathf.FloorToInt(Mathf.Max(fieldWidth, 120f) / 7f));
+        int lines = 0;
+        var logicalLines = value.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+
+        foreach (var line in logicalLines)
+        {
+            int length = string.IsNullOrEmpty(line) ? 1 : line.Length;
+            lines += Mathf.Max(1, Mathf.CeilToInt(length / (float)charsPerLine));
+        }
+
+        return lines;
     }
 
     private void SetupSourceToggle(VisualElement root, AtlasWorkflowParamState pState, bool isEditable)
