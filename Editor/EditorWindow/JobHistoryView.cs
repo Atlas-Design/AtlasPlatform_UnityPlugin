@@ -1261,7 +1261,22 @@ public class JobHistoryView
 
     private VisualElement GetHoverPreviewParent()
     {
-        return splitRoot ?? rootContainer;
+        var current = rootContainer;
+        while (current != null)
+        {
+            if (current.name == "main-container")
+            {
+                current.style.position = Position.Relative;
+                return current;
+            }
+
+            current = current.parent;
+        }
+
+        var fallback = splitRoot ?? rootContainer;
+        if (fallback != null)
+            fallback.style.position = Position.Relative;
+        return fallback;
     }
 
     private void HideJobHoverPreview()
