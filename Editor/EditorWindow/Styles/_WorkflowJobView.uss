@@ -202,6 +202,107 @@
     font-size: 11px;
 }
 
+.job-hover-preview {
+    position: absolute;
+    width: 320px;
+    max-width: 320px;
+    max-height: 260px;
+    padding: 8px 10px;
+    background-color: rgb(36, 36, 36);
+    border-width: 1px;
+    border-color: rgb(82, 82, 82);
+    border-radius: 4px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.job-hover-preview__title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(230, 230, 230);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-hover-preview__status {
+    font-size: 10px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-hover-preview__error {
+    font-size: 10px;
+    color: rgb(235, 190, 185);
+    margin-bottom: 5px;
+    white-space: normal;
+}
+
+.job-hover-preview__section {
+    margin-top: 5px;
+    flex-direction: column;
+}
+
+.job-hover-preview__section-title {
+    font-size: 9px;
+    -unity-font-style: bold;
+    color: rgb(145, 145, 145);
+    margin-bottom: 2px;
+}
+
+.job-hover-preview__param-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 24px;
+    margin-top: 2px;
+}
+
+.job-hover-preview__thumbnail {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    max-width: 34px;
+    max-height: 34px;
+    margin-right: 6px;
+    background-color: rgb(24, 24, 24);
+    border-width: 1px;
+    border-color: rgb(58, 58, 58);
+}
+
+.job-hover-preview__param-text {
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.job-hover-preview__param-name {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(215, 215, 215);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-hover-preview__param-value {
+    font-size: 9px;
+    color: rgb(150, 150, 150);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-hover-preview__more {
+    font-size: 9px;
+    color: rgb(130, 130, 130);
+    margin-top: 3px;
+}
+
 /* Batches catalog row (one row per BatchId) */
 .batch-history-row {
     margin: 2px 2px;

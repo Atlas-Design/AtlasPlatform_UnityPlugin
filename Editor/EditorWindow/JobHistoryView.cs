@@ -46,6 +46,11 @@ public class JobHistoryView
     // Selection state
     private AtlasWorkflowJobState selectedJob;
     private VisualElement lastSelectedRow;
+    private VisualElement hoverPreviewPopup;
+    private readonly List<Texture2D> hoverPreviewTextures = new List<Texture2D>();
+
+    private const int HoverPreviewMaxItemsPerSection = 4;
+    private const int HoverPreviewMaxTextChars = 70;
 
     public JobHistoryView(
         VisualElement container,
@@ -67,7 +72,9 @@ public class JobHistoryView
         if (rootContainer == null)
             return;
 
+        HideJobHoverPreview();
         rootContainer.Clear();
+        rootContainer.style.position = Position.Relative;
 
         // Load our split-view UXML template
         var splitTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
@@ -78,6 +85,7 @@ public class JobHistoryView
         {
             splitRoot = splitTree.Instantiate();
             splitRoot.style.flexGrow = 1f;
+            splitRoot.style.position = Position.Relative;
             rootContainer.Add(splitRoot);
 
             leftPane = splitRoot.Q<VisualElement>("LeftPane");
@@ -112,6 +120,7 @@ public class JobHistoryView
             splitRoot = null;
             leftPane = rootContainer;
             rightPane = null;
+            rootContainer.style.position = Position.Relative;
 
             // Add filter toolbar
             BuildFilterToolbar(leftPane);
@@ -509,6 +518,7 @@ public class JobHistoryView
         if (jobListContainer == null)
             return;
 
+        HideJobHoverPreview();
         jobListContainer.Clear();
 
         if (viewModeIsBatches)
@@ -974,19 +984,6 @@ public class JobHistoryView
         var timeLabel = new Label(FormatRelativeTime(job.CreatedAtUtc));
         timeLabel.AddToClassList("job-row-time");
 
-        // Tooltip with full details
-        var startLocal = job.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
-        string duration = FormatJobDuration(job);
-        row.tooltip = $"{job.WorkflowName}\nStarted: {startLocal}\nDuration: {duration}\nStatus: {job.Status}";
-        if (job.BatchIndex.HasValue && !string.IsNullOrEmpty(job.BatchId))
-        {
-            int total = GetBatchMemberCount(job.BatchId);
-            if (total < 1)
-                total = 1;
-            string batchLabel = string.IsNullOrEmpty(job.BatchName) ? job.BatchId : job.BatchName;
-            row.tooltip += $"\nBatch: {batchLabel} (instance {job.BatchIndex.Value + 1} of {total})";
-        }
-
         // RIGHT: colored status indicator
         var statusIndicator = new VisualElement();
         statusIndicator.AddToClassList("job-status-indicator");
@@ -1009,6 +1006,10 @@ public class JobHistoryView
             evt.StopPropagation();
         });
 
+        row.RegisterCallback<MouseEnterEvent>(_ => ShowJobHoverPreview(job, row));
+        row.RegisterCallback<MouseLeaveEvent>(_ => HideJobHoverPreview());
+        row.RegisterCallback<DetachFromPanelEvent>(_ => HideJobHoverPreview());
+
         row.AddManipulator(new ContextualMenuManipulator(evt =>
         {
             evt.menu.AppendAction(
@@ -1025,6 +1026,258 @@ public class JobHistoryView
         }));
 
         return row;
+    }
+
+    private void ShowJobHoverPreview(AtlasWorkflowJobState job, VisualElement row)
+    {
+        if (job == null || rootContainer == null || row == null)
+            return;
+
+        HideJobHoverPreview();
+
+        hoverPreviewPopup = BuildJobHoverPreview(job);
+        hoverPreviewPopup.pickingMode = PickingMode.Ignore;
+        GetHoverPreviewParent().Add(hoverPreviewPopup);
+        PositionHoverPreview(row, hoverPreviewPopup);
+    }
+
+    private VisualElement BuildJobHoverPreview(AtlasWorkflowJobState job)
+    {
+        var popup = new VisualElement();
+        popup.AddToClassList("job-hover-preview");
+
+        var title = new Label(job.WorkflowName ?? "Unnamed Job");
+        title.AddToClassList("job-hover-preview__title");
+        popup.Add(title);
+
+        var statusLine = new Label(BuildHoverStatusLine(job));
+        statusLine.AddToClassList("job-hover-preview__status");
+        statusLine.style.color = new StyleColor(GetStatusColor(job.Status));
+        popup.Add(statusLine);
+
+        if (!string.IsNullOrEmpty(job.ErrorMessage))
+        {
+            var error = new Label(TruncateForPreview(job.ErrorMessage.Trim(), HoverPreviewMaxTextChars));
+            error.AddToClassList("job-hover-preview__error");
+            popup.Add(error);
+        }
+
+        AddHoverParamSection(popup, "Inputs", job.InputsSnapshot);
+        AddHoverParamSection(popup, "Outputs", job.OutputsSnapshot);
+
+        return popup;
+    }
+
+    private string BuildHoverStatusLine(AtlasWorkflowJobState job)
+    {
+        var started = job.CreatedAtUtc.ToLocalTime().ToString("HH:mm:ss");
+        var duration = FormatJobDuration(job);
+        return string.IsNullOrEmpty(duration)
+            ? $"{job.Status} · {started}"
+            : $"{job.Status} · {duration} · {started}";
+    }
+
+    private void AddHoverParamSection(
+        VisualElement popup,
+        string title,
+        List<AtlasWorkflowParamState> parameters)
+    {
+        if (parameters == null || parameters.Count == 0)
+            return;
+
+        var section = new VisualElement();
+        section.AddToClassList("job-hover-preview__section");
+
+        var heading = new Label(title);
+        heading.AddToClassList("job-hover-preview__section-title");
+        heading.text = title.ToUpperInvariant();
+        section.Add(heading);
+
+        int shown = 0;
+        foreach (var param in parameters)
+        {
+            if (param == null)
+                continue;
+            if (shown >= HoverPreviewMaxItemsPerSection)
+                break;
+
+            section.Add(CreateHoverParamRow(param));
+            shown++;
+        }
+
+        int remaining = parameters.Count(p => p != null) - shown;
+        if (remaining > 0)
+        {
+            var more = new Label($"+ {remaining} more");
+            more.AddToClassList("job-hover-preview__more");
+            section.Add(more);
+        }
+
+        popup.Add(section);
+    }
+
+    private VisualElement CreateHoverParamRow(AtlasWorkflowParamState param)
+    {
+        var row = new VisualElement();
+        row.AddToClassList("job-hover-preview__param-row");
+
+        var thumbnail = TryCreateImagePreview(param);
+        if (thumbnail != null)
+            row.Add(thumbnail);
+
+        var textColumn = new VisualElement();
+        textColumn.AddToClassList("job-hover-preview__param-text");
+
+        var name = new Label(string.IsNullOrEmpty(param.Label) ? param.ParamId : param.Label);
+        name.AddToClassList("job-hover-preview__param-name");
+        textColumn.Add(name);
+
+        var value = new Label(GetHoverParamValue(param));
+        value.AddToClassList("job-hover-preview__param-value");
+        textColumn.Add(value);
+
+        row.Add(textColumn);
+        return row;
+    }
+
+    private Image TryCreateImagePreview(AtlasWorkflowParamState param)
+    {
+        if (param == null || param.ParamType != ParamType.image)
+            return null;
+
+        Texture2D texture = null;
+        bool destroyTexture = false;
+
+        if (!string.IsNullOrEmpty(param.FilePath) && File.Exists(param.FilePath))
+        {
+            try
+            {
+                texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                texture.hideFlags = HideFlags.HideAndDontSave;
+                if (!texture.LoadImage(File.ReadAllBytes(param.FilePath)))
+                {
+                    UnityEngine.Object.DestroyImmediate(texture);
+                    texture = null;
+                }
+                else
+                {
+                    destroyTexture = true;
+                }
+            }
+            catch
+            {
+                if (texture != null)
+                    UnityEngine.Object.DestroyImmediate(texture);
+                texture = null;
+            }
+        }
+        else if (param.ImageValue != null)
+        {
+            texture = param.ImageValue;
+        }
+
+        if (texture == null)
+            return null;
+
+        if (destroyTexture)
+            hoverPreviewTextures.Add(texture);
+
+        var image = new Image { image = texture };
+        image.AddToClassList("job-hover-preview__thumbnail");
+        image.scaleMode = ScaleMode.ScaleToFit;
+        return image;
+    }
+
+    private string GetHoverParamValue(AtlasWorkflowParamState param)
+    {
+        switch (param.ParamType)
+        {
+            case ParamType.boolean:
+                return param.BoolValue ? "true" : "false";
+            case ParamType.number:
+                return param.NumberValue.ToString("0.###");
+            case ParamType.@string:
+                return string.IsNullOrEmpty(param.StringValue)
+                    ? "(empty)"
+                    : TruncateForPreview(param.StringValue, HoverPreviewMaxTextChars);
+            case ParamType.image:
+                return GetFileOrAssetSummary(param, "image");
+            case ParamType.mesh:
+                return GetFileOrAssetSummary(param, "mesh");
+            case ParamType.audio:
+                return GetFileOrAssetSummary(param, "audio");
+            default:
+                return param.ParamType.ToString();
+        }
+    }
+
+    private string GetFileOrAssetSummary(AtlasWorkflowParamState param, string fallbackType)
+    {
+        if (!string.IsNullOrEmpty(param.FilePath))
+            return File.Exists(param.FilePath)
+                ? Path.GetFileName(param.FilePath)
+                : $"{Path.GetFileName(param.FilePath)} (missing)";
+
+        if (param.ImageValue != null)
+            return param.ImageValue.name;
+        if (param.MeshValue != null)
+            return param.MeshValue.name;
+
+        return $"No {fallbackType}";
+    }
+
+    private string TruncateForPreview(string value, int maxChars)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        value = value.Replace("\r", " ").Replace("\n", " ").Trim();
+        return value.Length <= maxChars ? value : value.Substring(0, maxChars).TrimEnd() + "…";
+    }
+
+    private void PositionHoverPreview(VisualElement row, VisualElement popup)
+    {
+        var parent = GetHoverPreviewParent();
+        var rootBounds = parent.worldBound;
+        var rowBounds = row.worldBound;
+
+        const float margin = 8f;
+        const float popupEstimatedHeight = 260f;
+        const float popupWidth = 320f;
+
+        float left = rowBounds.xMax - rootBounds.x + margin;
+        if (left + popupWidth > rootBounds.width)
+            left = Mathf.Max(margin, rowBounds.xMin - rootBounds.x - popupWidth - margin);
+        left = Mathf.Clamp(left, margin, Mathf.Max(margin, rootBounds.width - popupWidth - margin));
+
+        float top = rowBounds.y - rootBounds.y;
+        if (top + popupEstimatedHeight > rootBounds.height - margin)
+            top = rowBounds.yMax - rootBounds.y - popupEstimatedHeight;
+        top = Mathf.Clamp(top, margin, Mathf.Max(margin, rootBounds.height - popupEstimatedHeight - margin));
+
+        popup.style.left = left;
+        popup.style.top = top;
+    }
+
+    private VisualElement GetHoverPreviewParent()
+    {
+        return splitRoot ?? rootContainer;
+    }
+
+    private void HideJobHoverPreview()
+    {
+        if (hoverPreviewPopup != null)
+        {
+            hoverPreviewPopup.RemoveFromHierarchy();
+            hoverPreviewPopup = null;
+        }
+
+        foreach (var texture in hoverPreviewTextures)
+        {
+            if (texture != null)
+                UnityEngine.Object.DestroyImmediate(texture);
+        }
+        hoverPreviewTextures.Clear();
     }
 
     /// <summary>
@@ -1052,27 +1305,24 @@ public class JobHistoryView
 
     private void SetStatusIndicatorColor(VisualElement element, JobStatus status)
     {
-        Color color;
+        element.style.backgroundColor = new StyleColor(GetStatusColor(status));
+    }
+
+    private Color GetStatusColor(JobStatus status)
+    {
         switch (status)
         {
             case JobStatus.Running:
-                color = Color.yellow;
-                break;
+                return Color.yellow;
             case JobStatus.Succeeded:
-                color = Color.green;
-                break;
+                return Color.green;
             case JobStatus.Failed:
-                color = Color.red;
-                break;
+                return Color.red;
             case JobStatus.Cancelled:
-                color = new Color(0.75f, 0.55f, 0.35f);
-                break;
+                return new Color(0.75f, 0.55f, 0.35f);
             default:
-                color = Color.gray;
-                break;
+                return Color.gray;
         }
-
-        element.style.backgroundColor = new StyleColor(color);
     }
 
     private void HighlightSelectedRow(VisualElement row)
