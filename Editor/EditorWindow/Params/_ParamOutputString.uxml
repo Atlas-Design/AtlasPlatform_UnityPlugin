@@ -3,8 +3,7 @@
     <ui:VisualElement class="param-row">
         <ui:VisualElement name="type-indicator" class="type-indicator" />
         <ui:Label name="label" text="Parameter Label" class="param-label" />
-        <ui:ScrollView name="value-scroll" vertical-scroller-visibility="Auto" horizontal-scroller-visibility="Hidden" style="flex-grow: 1; max-height: 200px; flex-shrink: 0;">
-            <ui:TextField name="value-field" class="param-value" style="white-space: normal;" />
-        </ui:ScrollView>
+        <ui:TextField name="value-field" class="param-value output-readonly-text" style="white-space: normal;" />
+        <ui:Button name="copy-button" text="Copy" class="output-copy-button" />
     </ui:VisualElement>
 </ui:UXML>

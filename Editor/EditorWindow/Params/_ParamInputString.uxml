@@ -4,5 +4,6 @@
         <ui:VisualElement name="type-indicator" class="type-indicator" />
         <ui:Label name="label" text="Parameter Label" class="param-label" />
         <ui:TextField name="value-field" class="param-value" />
+        <ui:Button name="copy-button" text="Copy" class="output-copy-button" />
     </ui:VisualElement>
 </ui:UXML>

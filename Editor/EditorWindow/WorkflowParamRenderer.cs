@@ -293,7 +293,6 @@ public class WorkflowParamRenderer
         if (field != null)
         {
             field.value = inputState.StringValue;
-            field.SetEnabled(isEditable);
 
             if (isEditable)
             {
@@ -302,6 +301,22 @@ public class WorkflowParamRenderer
                     SaveState();
                 });
             }
+            else
+            {
+                field.multiline = true;
+                field.isReadOnly = true;
+                field.AddToClassList("output-readonly-text");
+            }
+        }
+
+        var copyButton = row.Q<Button>("copy-button");
+        if (copyButton != null)
+        {
+            copyButton.style.display = isEditable ? DisplayStyle.None : DisplayStyle.Flex;
+            copyButton.clicked += () =>
+            {
+                EditorGUIUtility.systemCopyBuffer = inputState.StringValue ?? string.Empty;
+            };
         }
         return row;
     }
@@ -486,8 +501,17 @@ public class WorkflowParamRenderer
         if (field != null)
         {
             field.value = outputState.StringValue;
-            field.SetEnabled(false);
+            field.multiline = true;
             field.isReadOnly = true;
+        }
+
+        var copyButton = row.Q<Button>("copy-button");
+        if (copyButton != null)
+        {
+            copyButton.clicked += () =>
+            {
+                EditorGUIUtility.systemCopyBuffer = outputState.StringValue ?? string.Empty;
+            };
         }
         return row;
     }
