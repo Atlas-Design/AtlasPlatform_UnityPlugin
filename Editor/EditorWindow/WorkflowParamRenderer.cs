@@ -370,6 +370,21 @@ public class WorkflowParamRenderer
         
         UpdateFilePathDisplay(inputState.FilePath);
 
+        Action refreshSourceVisibility = null;
+        void ApplyExternalImagePath(string path)
+        {
+            if (!IsSupportedImageFile(path))
+                return;
+
+            inputState.FilePath = path;
+            inputState.SourceType = InputSourceType.FilePath;
+            inputState.ImageValue = null;
+            projectField?.SetValueWithoutNotify(null);
+            UpdateFilePathDisplay(path);
+            refreshSourceVisibility?.Invoke();
+            SaveState();
+        }
+
         var browseButton = root.Q<Button>("browse-button");
         if (browseButton != null)
         {
@@ -380,15 +395,16 @@ public class WorkflowParamRenderer
                     string path = EditorUtility.OpenFilePanel("Select Image", "", "png,jpg,jpeg");
                     if (!string.IsNullOrEmpty(path))
                     {
-                        inputState.FilePath = path;
-                        UpdateFilePathDisplay(path);
-                        SaveState();
+                        ApplyExternalImagePath(path);
                     }
                 };
             }
         }
 
-        SetupSourceToggle(root, inputState, isEditable);
+        refreshSourceVisibility = SetupSourceToggle(root, inputState, isEditable);
+        if (isEditable)
+            RegisterImageFileDropTarget(root.Q<VisualElement>(className: "param-input-box") ?? root, ApplyExternalImagePath);
+
         return root;
     }
 
@@ -1192,6 +1208,70 @@ public class WorkflowParamRenderer
         if (label != null) label.text = text;
     }
 
+    private void RegisterImageFileDropTarget(VisualElement dropTarget, Action<string> onImageDropped)
+    {
+        if (dropTarget == null || onImageDropped == null)
+            return;
+
+        void ClearDropState()
+        {
+            dropTarget.RemoveFromClassList("file-drop-target--active");
+        }
+
+        dropTarget.RegisterCallback<DragUpdatedEvent>(evt =>
+        {
+            if (TryGetDraggedImagePath(out _))
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                dropTarget.AddToClassList("file-drop-target--active");
+                evt.StopPropagation();
+            }
+        });
+
+        dropTarget.RegisterCallback<DragPerformEvent>(evt =>
+        {
+            if (TryGetDraggedImagePath(out var imagePath))
+            {
+                DragAndDrop.AcceptDrag();
+                onImageDropped(imagePath);
+                evt.StopPropagation();
+            }
+
+            ClearDropState();
+        });
+
+        dropTarget.RegisterCallback<DragLeaveEvent>(_ => ClearDropState());
+        dropTarget.RegisterCallback<DragExitedEvent>(_ => ClearDropState());
+    }
+
+    private static bool TryGetDraggedImagePath(out string imagePath)
+    {
+        imagePath = null;
+
+        if (DragAndDrop.paths == null)
+            return false;
+
+        foreach (var path in DragAndDrop.paths)
+        {
+            if (IsSupportedImageFile(path))
+            {
+                imagePath = path;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedImageFile(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            return false;
+
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension == ".png" || extension == ".jpg" || extension == ".jpeg";
+    }
+
     private void ConfigureReadOnlyTextField(TextField field, string value)
     {
         if (field == null)
@@ -1239,7 +1319,7 @@ public class WorkflowParamRenderer
         return lines;
     }
 
-    private void SetupSourceToggle(VisualElement root, AtlasWorkflowParamState pState, bool isEditable)
+    private Action SetupSourceToggle(VisualElement root, AtlasWorkflowParamState pState, bool isEditable)
     {
         var sourceDropdown = root.Q<DropdownField>("source-dropdown");
         var projectField = root.Q("project-asset-field");
@@ -1264,9 +1344,10 @@ public class WorkflowParamRenderer
             }
         }
 
-        void UpdateVisibility()
+        void UpdateVisibility(bool inferSourceFromExistingValues = false)
         {
-            EnsureValidSourceType();
+            if (inferSourceFromExistingValues)
+                EnsureValidSourceType();
 
             bool isProject = pState.SourceType == InputSourceType.Project;
 
@@ -1329,7 +1410,8 @@ public class WorkflowParamRenderer
             fileButton?.SetEnabled(false);
         }
 
-        UpdateVisibility();
+        UpdateVisibility(inferSourceFromExistingValues: true);
+        return () => UpdateVisibility();
     }
     
     /// <summary>

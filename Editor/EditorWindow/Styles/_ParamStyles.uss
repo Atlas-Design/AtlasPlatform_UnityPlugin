@@ -101,6 +101,11 @@
     background-color: rgba(0, 0, 0, 0.2);
 }
 
+.file-drop-target--active .param-input-box {
+    border-color: rgb(95, 150, 255);
+    background-color: rgba(60, 100, 170, 0.22);
+}
+
 .string-param-row {
     padding-bottom: 6px;
 }
